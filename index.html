@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Sudoku clássico no navegador: três dificuldades, anotações, temas e partida salva." />
+    <title>Jogos de Jornal — Sudoku</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231565c0'/%3E%3Cpath d='M11 6v20M21 6v20M6 11h20M6 21h20' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <h1>Sudoku</h1>
+        <span id="date" class="date"></span>
+        <span class="spacer"></span>
+        <button id="menuBtn" class="btn" type="button" hidden>Menu</button>
+        <div class="themeBox">
+          <button id="themeBtn" class="btn" type="button" aria-haspopup="listbox" aria-expanded="false">Tema</button>
+          <ul id="themeList" class="themeList" role="listbox" aria-label="Tema" hidden></ul>
+        </div>
+      </header>
+
+      <main>
+        <section id="home" class="home" hidden>
+          <button id="continueBtn" class="btn primary wide" type="button" hidden></button>
+          <h2>Novo jogo</h2>
+          <div id="levels" class="levels"></div>
+        </section>
+
+        <section id="game" class="game" hidden>
+          <div class="status"><span id="diff"></span><span id="timer" aria-live="off"></span></div>
+          <label class="flag"><input id="popupFlag" type="checkbox" /> Abrir teclado ao clicar na célula</label>
+          <div class="boardWrap">
+            <div id="board" class="board" role="grid" aria-label="Tabuleiro de Sudoku"></div>
+            <div id="popup" class="popup" role="dialog" aria-label="Escolher número" hidden></div>
+          </div>
+          <div id="numRow" class="numRow" hidden></div>
+          <div class="controls">
+            <div class="seg" role="group" aria-label="Modo de preenchimento">
+              <button id="modeNormal" type="button" class="on">Normal</button>
+              <button id="modeNotes" type="button">Anotação</button>
+            </div>
+            <button id="undoBtn" class="btn" type="button">Desfazer</button>
+          </div>
+          <label class="flag"><input id="autoNotes" type="checkbox" /> Anotações automáticas</label>
+        </section>
+      </main>
+
+      <dialog id="win" class="win">
+        <h2>Parabéns!</h2>
+        <p id="winText"></p>
+        <div class="winBtns">
+          <button id="winAgain" class="btn primary" type="button">Jogar outro</button>
+          <button id="winMenu" class="btn" type="button">Menu</button>
+        </div>
+      </dialog>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

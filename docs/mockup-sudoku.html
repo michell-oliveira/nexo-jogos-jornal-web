@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup Sudoku Web</title>
+<style>
+:root{--bg:#fff;--fg:#121212;--line:#999;--thick:#121212;--rel:#dcdcdc;--match:#d2c5ae;--sel:#f9e8c3;--hl:#f59a00;--btn:#ddd}
+body{font-family:Georgia,serif;margin:0;background:var(--bg);color:var(--fg)}
+header{padding:16px 24px;border-bottom:1px solid #ddd}header h1{display:inline;font-size:30px}header span{margin-left:12px;color:#555}
+.bar{text-align:center;padding:10px;border-bottom:1px solid #ddd;font:14px sans-serif}
+.wrap{display:flex;gap:32px;justify-content:center;padding:24px;flex-wrap:wrap}
+#board{display:grid;grid-template-columns:repeat(9,48px);border:3px solid var(--thick);position:relative;font:600 28px sans-serif}
+.c{width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:.5px solid var(--line);box-sizing:border-box;cursor:pointer;user-select:none}
+.c:nth-child(3n){border-right:2px solid var(--thick)}.c:nth-child(9n){border-right:0}
+.c:nth-child(n+19):nth-child(-n+27),.c:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid var(--thick)}
+.rel{background:var(--rel)}.sel{background:var(--hl)}.match{background:var(--match)}.user{color:#2a5db0;font-weight:400}
+.side{font:14px sans-serif;width:220px}.mode{display:flex;margin-bottom:12px}.mode b,.mode i{flex:1;text-align:center;padding:9px;font-style:normal;border:1px solid #ddd}.mode b{background:#111;color:#fff}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pad div{background:var(--btn);padding:16px 0;text-align:center;font-size:22px;color:#777}
+#pop{position:absolute;display:none;grid-template-columns:repeat(3,44px);gap:4px;padding:8px;background:#fff;border:1px solid #999;border-radius:8px;box-shadow:0 6px 20px #0004;z-index:5;font:600 22px sans-serif}
+#pop div{height:44px;display:flex;align-items:center;justify-content:center;background:var(--btn);border-radius:4px;cursor:pointer}
+#pop div:hover{background:#111;color:#fff}
+.note{max-width:460px;font:13px sans-serif;color:#444;line-height:1.5}
+</style></head><body>
+<header><h1>Sudoku</h1><span>15 de outubro de 2026</span></header>
+<div class="bar">Fácil &nbsp; 04:12 &nbsp; · &nbsp; Novo jogo · Dica · Tema</div>
+<div class="wrap">
+<div style="position:relative"><div id="board"></div>
+<div id="pop"></div></div>
+<div class="side"><div class="mode"><b>Normal</b><i>Anotação</i></div><div class="pad"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>✕</div><div style="grid-column:span 2">Desfazer</div></div>
+<p><label><input type="checkbox"> Anotações automáticas</label></p></div>
+<div class="note"><b>Demo:</b> clique com o botão direito numa célula para abrir o teclado flutuante; clique no número para preencher; clique fora para fechar. <br><br>
+Marcado como novo vs. o jogo do jornal: <b>teclado flutuante no botão direito</b> (o teclado lateral continua). Na tela de vitória: "Parabéns! Você terminou um puzzle fácil em 09:59".</div>
+</div>
+<script>
+const g="471562893869374215352819746735491628218756934946238157624985371583127469197643582";
+const b=document.getElementById('board'),pop=document.getElementById('pop');
+for(let i=0;i<81;i++){const d=document.createElement('div');d.className='c'+((i%9==8)?' rel':'');d.textContent=i%7==0?'':g[i];if(i%7==0)d.classList.add('user');
+d.oncontextmenu=e=>{e.preventDefault();document.querySelectorAll('.sel').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');
+const r=d.getBoundingClientRect(),br=b.parentElement.getBoundingClientRect();pop.style.left=Math.min(r.left-br.left,br.width-170)+'px';pop.style.top=(r.bottom-br.top+4)+'px';pop.style.display='grid';pop._c=d};b.appendChild(d)}
+for(let n=1;n<=9;n++){const p=document.createElement('div');p.textContent=n;p.onclick=()=>{pop._c.textContent=n;pop._c.classList.add('user');pop.style.display='none'};pop.appendChild(p)}
+document.addEventListener('mousedown',e=>{if(!pop.contains(e.target)&&e.button!=2)pop.style.display='none'});
+</script></body></html>

@@ -1,0 +1,211 @@
+:root {
+  --bg: #fff;
+  --surface: #f4f4f4;
+  --variant: #e0e0e0;
+  --fg: #121212;
+  --primary: #1565c0;
+  --on-primary: #fff;
+  --secondary: #5c6bc0;
+  --tertiary: #f9a825;
+  --error: #c62828;
+  --outline: #9e9e9e;
+  --board: min(94vw, 540px);
+  --cell: calc(var(--board) / 9);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+[hidden] { display: none !important; }
+
+#app { max-width: 720px; margin: 0 auto; padding: 0 12px 32px; }
+
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--variant);
+}
+.top h1 { margin: 0; font: 800 clamp(26px, 6vw, 34px) Georgia, 'Times New Roman', serif; }
+.date { color: color-mix(in srgb, var(--fg) 65%, var(--bg)); font-family: Georgia, serif; }
+.spacer { flex: 1; }
+.top .btn, .themeBox { align-self: center; }
+
+.btn {
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  background: var(--variant);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--outline); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn.wide { width: 100%; padding: 14px; font-size: 16px; }
+:focus-visible { outline: 3px solid var(--tertiary); outline-offset: 2px; }
+
+/* Seletor de tema */
+.themeBox { position: relative; }
+.themeList {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 230px;
+  max-height: 70vh;
+  overflow: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px #0005;
+}
+.themeList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.themeList li:hover { background: var(--variant); }
+.themeList li[aria-selected='true'] { outline: 2px solid var(--primary); }
+.dots { display: inline-flex; }
+.dots i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--outline);
+  margin-right: -4px;
+}
+
+/* Início */
+.home { padding-top: 20px; max-width: 420px; margin: 0 auto; }
+.home h2 { font-size: 16px; margin: 24px 0 10px; }
+.levels { display: grid; gap: 10px; }
+
+/* Jogo */
+.status { display: flex; justify-content: center; gap: 28px; padding: 12px 0 4px; font-size: 14px; }
+.flag { display: flex; justify-content: center; gap: 8px; align-items: center; padding: 8px 0; font-size: 14px; cursor: pointer; user-select: none; }
+.flag input { width: 16px; height: 16px; accent-color: var(--primary); }
+
+.boardWrap { position: relative; width: var(--board); margin: 4px auto 0; }
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  width: 100%;
+  aspect-ratio: 1;
+  border: 3px solid var(--fg);
+  background: var(--bg);
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: calc(var(--cell) * 0.62);
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--bg);
+  border: 0.5px solid var(--outline);
+  border-radius: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cell.bR { border-right: 2px solid var(--fg); }
+.cell.bB { border-bottom: 2px solid var(--fg); }
+.cell.related { background: var(--variant); }
+.cell.match { background: color-mix(in srgb, var(--primary) 32%, var(--bg)); }
+.cell.user { color: var(--primary); font-weight: 500; }
+.cell.conflict { color: var(--error); }
+.cell.selected { background: var(--primary); color: var(--on-primary); }
+.cell.selected.conflict { box-shadow: inset 0 0 0 3px var(--error); }
+.cell:focus-visible { outline-offset: -4px; z-index: 1; }
+
+.notes {
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  font-size: calc(var(--cell) * 0.24);
+  font-weight: 500;
+  line-height: 1;
+  color: color-mix(in srgb, currentColor 75%, transparent);
+}
+.notes span { display: flex; align-items: center; justify-content: center; }
+
+/* Teclado flutuante */
+.popup {
+  position: absolute;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px #0006;
+}
+.popup button, .numRow button {
+  font: 600 22px system-ui, sans-serif;
+  color: var(--fg);
+  background: var(--variant);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.popup button { height: 52px; }
+.popup button:hover, .numRow button:hover { background: var(--primary); color: var(--on-primary); }
+.popup button.noted, .numRow button.noted { outline: 2px solid var(--tertiary); }
+.popup .erase { grid-column: span 3; height: 40px; font-size: 16px; }
+
+/* Linha de números (flag desligado) */
+.numRow {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 5px;
+  width: var(--board);
+  margin: 12px auto 0;
+}
+.numRow button { height: clamp(40px, 10vw, 54px); font-size: clamp(18px, 5vw, 24px); }
+.numRow button.erase { font-size: clamp(16px, 4.5vw, 20px); }
+
+.controls { display: flex; justify-content: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--outline); border-radius: 6px; overflow: hidden; }
+.seg button { font: inherit; font-size: 14px; padding: 9px 16px; color: var(--fg); background: transparent; border: 0; cursor: pointer; }
+.seg button.on { background: var(--fg); color: var(--bg); }
+
+/* Vitória */
+.win {
+  max-width: min(92vw, 400px);
+  padding: 28px 24px;
+  text-align: center;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--outline);
+  border-radius: 14px;
+}
+.win::backdrop { background: #0008; }
+.win h2 { margin: 0 0 8px; font: 800 30px Georgia, serif; }
+.win p { margin: 0 0 20px; font-size: 18px; }
+.winBtns { display: flex; gap: 10px; justify-content: center; }
