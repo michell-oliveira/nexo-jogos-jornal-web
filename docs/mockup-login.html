@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup Login</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#282a36;color:#f8f8f2;font-family:system-ui,sans-serif}
+form{width:min(92vw,340px);background:#343746;border:1px solid #6272a4;border-radius:12px;padding:28px 24px;display:grid;gap:12px}
+h1{margin:0 0 4px;font:800 30px Georgia,serif;text-align:center}
+p{margin:0 0 8px;text-align:center;color:#bbb;font-size:14px}
+label{font-size:13px;display:grid;gap:4px}
+input{font:inherit;padding:10px;border-radius:6px;border:1px solid #6272a4;background:#282a36;color:inherit}
+button{font:inherit;padding:12px;border:0;border-radius:6px;background:#bd93f9;color:#111;cursor:pointer;font-weight:600}
+.err{color:#ff5555;font-size:13px;text-align:center}
+.note{position:fixed;bottom:10px;font-size:12px;color:#999}
+</style></head><body>
+<form onsubmit="return false">
+<h1>Sudoku</h1><p>Jogos de Jornal — acesso restrito</p>
+<label>Usuário<input autocomplete="username"></label>
+<label>Senha<input type="password" autocomplete="current-password"></label>
+<div class="err">Usuário ou senha inválidos (exemplo de erro)</div>
+<button>Entrar</button>
+</form>
+<div class="note">Mockup: mesmo tema do jogo (aqui Dracula). Após entrar, abre o Sudoku normalmente; botão "Sair" no cabeçalho.</div>
+</body></html>

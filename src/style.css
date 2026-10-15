@@ -36,7 +36,8 @@ body {
 .top h1 { margin: 0; font: 800 clamp(26px, 6vw, 34px) Georgia, 'Times New Roman', serif; }
 .date { color: color-mix(in srgb, var(--fg) 65%, var(--bg)); font-family: Georgia, serif; }
 .spacer { flex: 1; }
-.top .btn, .themeBox { align-self: center; }
+.top .btn, .themeBox, .logout { align-self: center; }
+.logout { margin: 0; }
 
 .btn {
   font: inherit;
