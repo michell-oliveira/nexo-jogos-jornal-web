@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — variações do tema Jornal</title>
+<style>
+  body{margin:0;padding:24px;background:#e9e9e9;font-family:system-ui,sans-serif;color:#222}
+  h1{font-size:20px;margin:0 0 4px} .sub{margin:0 0 20px;font-size:14px;opacity:.7}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}
+  .card{border-radius:10px;overflow:hidden;box-shadow:0 1px 6px #0003;background:var(--bg);color:var(--fg);padding:14px 14px 16px}
+  .tag{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .tag b{font:900 22px Georgia,'Times New Roman',serif}
+  .tag span{font-size:12px;opacity:.7}
+  .name{font:700 13px system-ui;margin:0 0 8px;padding:3px 8px;border-radius:99px;display:inline-block;background:var(--btn);color:var(--btnfg)}
+  .desc{font-size:12px;opacity:.75;margin:0 0 10px;min-height:32px}
+  .board{display:grid;grid-template-columns:repeat(9,1fr);border:2px solid var(--thick);background:var(--line);gap:1px;aspect-ratio:1}
+  .c{display:grid;place-items:center;font:800 clamp(14px,4.4vw,22px) system-ui,sans-serif;background:var(--empty);aspect-ratio:1}
+  .c.g{background:var(--given)} .c.pe{background:var(--peer)} .c.pf{background:var(--peerf)}
+  .c.same{background:var(--same);color:var(--selfg)} .c.sel{background:var(--sel);color:var(--selfg)}
+  .c.b-r{margin-right:1px;box-shadow:1px 0 0 var(--thick)} .c.b-b{box-shadow:0 1px 0 var(--thick)} .c.b-r.b-b{box-shadow:1px 0 0 var(--thick),0 1px 0 var(--thick)}
+  .bar{display:flex;gap:8px;margin-top:10px}
+  .bar i{font:600 12px system-ui;font-style:normal;padding:6px 12px;border-radius:4px;border:1px solid var(--line)}
+  .bar i.on{background:var(--btn);color:var(--btnfg);border-color:var(--btn)}
+  .rec{margin-top:8px;font-size:11px;opacity:.6}
+</style>
+</head>
+<body>
+<h1>Variações do tema “Jornal”</h1>
+<p class="sub">Mesmo tabuleiro e mesma seleção (o 3 em destaque) em cada paleta. Os 3 primeiros são pedidos/derivados; os demais são sugestões.</p>
+<div class="grid" id="grid"></div>
+<script>
+const PUZZLE = [
+  '..156..93','86.3.4...','3528....6','.35.9..2.','218.56...','......157','62.98....','..31..4..','19.64.5..',
+].join('');
+
+const THEMES = [
+  { name:'Jornal Claro', tag:'Original (sua referência)', desc:'Branco com células fixas cinza e seleção laranja, bege nas faixas.',
+    v:{bg:'#ffffff',fg:'#121212',empty:'#ffffff',given:'#dedede',sel:'#e58f00',same:'#e58f00',selfg:'#121212',peer:'#f9e9c5',peerf:'#d3c6b0',line:'#9e9e9e',thick:'#121212',btn:'#121212',btnfg:'#ffffff'} },
+  { name:'Jornal Sépia', tag:'Papel envelhecido', desc:'Tom de papel amarelado, menos contraste de brilho, cansa menos a vista.',
+    v:{bg:'#f4ecd8',fg:'#3b2f1e',empty:'#f8f1e0',given:'#e2d5b5',sel:'#b5651d',same:'#c98a4b',selfg:'#ffffff',peer:'#ecdcb8',peerf:'#d8c597',line:'#a89a78',thick:'#3b2f1e',btn:'#3b2f1e',btnfg:'#f4ecd8'} },
+  { name:'Jornal Noturno', tag:'Escuro, mesma identidade', desc:'Fundo grafite com a seleção laranja preservada; faixas em marrom escuro.',
+    v:{bg:'#121212',fg:'#f2f2f2',empty:'#1a1a1a',given:'#2c2c2c',sel:'#e58f00',same:'#b36f00',selfg:'#121212',peer:'#2b2418',peerf:'#3d3322',line:'#4a4a4a',thick:'#d0d0d0',btn:'#f2f2f2',btnfg:'#121212'} },
+  { name:'Jornal Tinta', tag:'Sugestão: P&B de impressão', desc:'Preto no branco real, seleção invertida (preto). Ideal para alto contraste e impressão.',
+    v:{bg:'#ffffff',fg:'#000000',empty:'#ffffff',given:'#e6e6e6',sel:'#000000',same:'#555555',selfg:'#ffffff',peer:'#f2f2f2',peerf:'#cfcfcf',line:'#8a8a8a',thick:'#000000',btn:'#000000',btnfg:'#ffffff'} },
+  { name:'Jornal Salmão', tag:'Sugestão: caderno de economia', desc:'Fundo salmão clássico de jornal financeiro, seleção azul-petróleo.',
+    v:{bg:'#fff1e5',fg:'#33302e',empty:'#fff7ef',given:'#f2dfce',sel:'#0f5499',same:'#4a86c5',selfg:'#ffffff',peer:'#fbe3cc',peerf:'#e6cbb0',line:'#b9a591',thick:'#33302e',btn:'#0f5499',btnfg:'#ffffff'} },
+  { name:'Jornal Tabloide', tag:'Sugestão: vermelho de manchete', desc:'Branco com seleção vermelha de tabloide e faixas rosadas.',
+    v:{bg:'#ffffff',fg:'#161616',empty:'#ffffff',given:'#e8e8e8',sel:'#c8102e',same:'#e0596f',selfg:'#ffffff',peer:'#fde4e8',peerf:'#f1bcc5',line:'#a0a0a0',thick:'#161616',btn:'#c8102e',btnfg:'#ffffff'} },
+  { name:'Jornal Verde', tag:'Sugestão: caderno de cultura', desc:'Branco com seleção verde-floresta e faixas em menta; visual calmo.',
+    v:{bg:'#fbfdf9',fg:'#14231a',empty:'#ffffff',given:'#e1e8df',sel:'#1e7a46',same:'#5fae82',selfg:'#ffffff',peer:'#e3f2e7',peerf:'#c3dbc9',line:'#9bab9e',thick:'#14231a',btn:'#14231a',btnfg:'#ffffff'} },
+  { name:'Jornal Marinho', tag:'Sugestão: edição noturna azul', desc:'Escuro azul-marinho com seleção dourada; elegante e confortável à noite.',
+    v:{bg:'#0e1a2b',fg:'#eef2f8',empty:'#13233a',given:'#1f3350',sel:'#f2b632',same:'#b88a1f',selfg:'#0e1a2b',peer:'#1a2c47',peerf:'#27415f',line:'#3a4f6b',thick:'#c9d4e4',btn:'#f2b632',btnfg:'#0e1a2b'} },
+  { name:'Jornal Complementar', tag:'Teoria das cores: azul + laranja', desc:'Azul (215°) e laranja (35°) são opostos no círculo cromático. Regra 60-30-10: neutro azulado, azul nas faixas, laranja só no foco.',
+    v:{bg:'#f6f8fc',fg:'#14213d',empty:'#ffffff',given:'#d9e2f0',sel:'#e8851a',same:'#f4b878',selfg:'#1b1b1b',peer:'#e6edf8',peerf:'#c2d1e8',line:'#9aaac2',thick:'#14213d',btn:'#14213d',btnfg:'#ffffff'} },
+];
+
+const SEL = 1 * 9 + 3; // célula selecionada (linha 2, coluna 4)
+const selDigit = PUZZLE[SEL];
+const row = (i) => Math.floor(i / 9), col = (i) => i % 9;
+const box = (i) => Math.floor(row(i) / 3) * 3 + Math.floor(col(i) / 3);
+
+function board() {
+  let h = '';
+  for (let i = 0; i < 81; i++) {
+    const d = PUZZLE[i], filled = d !== '.';
+    const peer = i !== SEL && (row(i) === row(SEL) || col(i) === col(SEL) || box(i) === box(SEL));
+    const cls = ['c'];
+    if (i === SEL) cls.push('sel');
+    else if (filled && d === selDigit) cls.push('same');
+    else if (peer) cls.push(filled ? 'pf' : 'pe');
+    else if (filled) cls.push('g');
+    if (col(i) % 3 === 2 && col(i) < 8) cls.push('b-r');
+    if (row(i) % 3 === 2 && row(i) < 8) cls.push('b-b');
+    h += `<div class="${cls.join(' ')}">${filled ? d : ''}</div>`;
+  }
+  return h;
+}
+
+document.getElementById('grid').innerHTML = THEMES.map((t) => `
+  <div class="card" style="${Object.entries(t.v).map(([k, x]) => `--${k}:${x}`).join(';')}">
+    <div class="tag"><b>Sudoku</b><span>15 de outubro de 2026</span></div>
+    <div class="name">${t.name}</div>
+    <p class="desc"><b>${t.tag}.</b> ${t.desc}</p>
+    <div class="board">${board()}</div>
+    <div class="bar"><i class="on">Normal</i><i>Anotação</i><i>Desfazer</i></div>
+  </div>`).join('');
+</script>
+</body>
+</html>

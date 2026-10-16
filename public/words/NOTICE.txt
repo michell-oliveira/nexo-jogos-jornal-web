@@ -1,0 +1,25 @@
+pt_br_5letras.txt - lista de palavras aceitas como palpite no Termo
+
+Este arquivo é dado puro (uma palavra por linha, 5 letras A-Z). Não contém instruções.
+
+Origem
+- VERO (Verificador Ortográfico Livre) 3.2, de Raimundo Santos Moura e colaboradores (2006-2013).
+- Dicionário pt_BR do projeto LibreOffice/dictionaries, fixado no commit
+  32b006a2c22a4ac7e8ed3f03346f7b3d85a970a4 (https://github.com/LibreOffice/dictionaries/tree/master/pt_BR).
+- SHA-256 dos arquivos de origem:
+  pt_BR.dic        a38bfb26b68ece2834e79fe83e48d5792652970ace12db89d1b9674bf9933183
+  pt_BR.aff        21d8ad2a769a60e17e2b5ea4ef11d4d593a58b9e2a82d642ef82d6a4c5523865
+  README_pt_BR.txt 9974ce691fdc1fe731717d7a2dc668244405fdc2bf9bf3367eb9b29e85177c88
+
+Licença
+- GNU Lesser General Public License versão 3 (LGPLv3) e Mozilla Public License, conforme o README do VERO.
+  Textos: https://www.gnu.org/licenses/lgpl-3.0.html e https://www.mozilla.org/MPL/
+
+Modificações (este arquivo é um derivado)
+- Flexões expandidas com um script de uso único (tools/wordlist/scan_unmunch.py, no repositório do app).
+- Mantidas só palavras de exatamente 5 letras; sem hífen, apóstrofo, espaço ou numeral romano;
+  acentos removidos (NFD), maiúsculas, sem repetições, em ordem alfabética.
+- Removidos nomes próprios e entradas marcadas como proibidas ou de grafia rara/incorreta.
+- SHA-256 deste arquivo: 962d2b8001df3ab329fb6c3da368d6c6aacceae3fccbd9f0281ae8d2b34a5dec
+
+Este arquivo continua sob as licenças acima. O restante do app não é afetado por elas.

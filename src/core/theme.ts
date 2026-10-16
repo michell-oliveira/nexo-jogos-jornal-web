@@ -4,9 +4,24 @@
  */
 export type ThemeId =
   | 'system' | 'light' | 'dark' | 'monokai' | 'dracula' | 'one_dark' | 'tokyo_night' | 'nord'
-  | 'gruvbox' | 'catppuccin' | 'solarized_dark' | 'solarized_light' | 'github_light';
+  | 'gruvbox' | 'catppuccin' | 'solarized_dark' | 'solarized_light' | 'github_light'
+  | 'jornal_claro' | 'jornal_sepia' | 'jornal_noturno' | 'jornal_tinta' | 'jornal_salmao'
+  | 'jornal_tabloide' | 'jornal_verde' | 'jornal_marinho' | 'jornal_complementar'
+  | 'cor_indigo_amarelo' | 'cor_teal_coral' | 'cor_magenta_verde' | 'cor_oceano' | 'cor_triade'
+  | 'cor_split' | 'cor_violeta' | 'cor_noturno_teal_coral';
+
+/** Cores extras dos temas "Jornal" (células fixas, faixas e seleção próprias); ausentes nos demais temas. */
+interface Extras {
+  empty: string;
+  given: string;
+  peer: string;
+  peerFilled: string;
+  same: string;
+  selFg: string;
+}
 
 interface Palette {
+  extras?: Extras;
   dark: boolean;
   bg: string;
   surface: string;
@@ -24,6 +39,15 @@ const p = (
   primary: string, secondary: string, tertiary: string, error: string, outline: string,
 ): Palette => ({ dark, bg, surface, variant, fg, primary, secondary, tertiary, error, outline });
 
+/** Tema "Jornal": primary = seleção; variant = célula fixa; surface = faixa (popup e lista de temas). */
+const j = (
+  dark: boolean, bg: string, fg: string, empty: string, given: string, sel: string, same: string, selFg: string,
+  peer: string, peerFilled: string, line: string, error = dark ? '#ff6b6b' : '#c62828',
+): Palette => ({
+  ...p(dark, bg, peer, given, fg, sel, same, sel, error, line),
+  extras: { empty, given, peer, peerFilled, same, selFg },
+});
+
 const LIGHT = p(false, '#ffffff', '#f4f4f4', '#e0e0e0', '#121212', '#1565c0', '#5c6bc0', '#f9a825', '#c62828', '#9e9e9e');
 const DARK = p(true, '#121212', '#1e1e1e', '#2c2c2c', '#eaeaea', '#90caf9', '#b39ddb', '#ffd54f', '#ff6b6b', '#666666');
 
@@ -40,22 +64,61 @@ const PALETTES: Record<Exclude<ThemeId, 'system'>, Palette> = {
   solarized_dark: p(true, '#002b36', '#073642', '#0b4452', '#93a1a1', '#268bd2', '#2aa198', '#b58900', '#dc322f', '#586e75'),
   solarized_light: p(false, '#fdf6e3', '#eee8d5', '#e3dcc4', '#586e75', '#268bd2', '#2aa198', '#b58900', '#dc322f', '#93a1a1'),
   github_light: p(false, '#ffffff', '#f6f8fa', '#eaeef2', '#24292f', '#0969da', '#8250df', '#1a7f37', '#cf222e', '#d0d7de'),
+  // Jornal: j(dark, bg, fg, vazia, fixa, seleção, igual, texto na seleção, faixa vazia, faixa preenchida, linha)
+  jornal_claro: j(false, '#ffffff', '#121212', '#ffffff', '#dedede', '#e58f00', '#e58f00', '#121212', '#f9e9c5', '#d3c6b0', '#9e9e9e'),
+  jornal_sepia: j(false, '#f4ecd8', '#3b2f1e', '#f8f1e0', '#e2d5b5', '#b5651d', '#c98a4b', '#ffffff', '#ecdcb8', '#d8c597', '#a89a78'),
+  jornal_noturno: j(true, '#121212', '#f2f2f2', '#1a1a1a', '#2c2c2c', '#e58f00', '#b36f00', '#121212', '#2b2418', '#3d3322', '#4a4a4a'),
+  jornal_tinta: j(false, '#ffffff', '#000000', '#ffffff', '#e6e6e6', '#000000', '#555555', '#ffffff', '#f2f2f2', '#cfcfcf', '#8a8a8a'),
+  jornal_salmao: j(false, '#fff1e5', '#33302e', '#fff7ef', '#f2dfce', '#0f5499', '#4a86c5', '#ffffff', '#fbe3cc', '#e6cbb0', '#b9a591'),
+  jornal_tabloide: j(false, '#ffffff', '#161616', '#ffffff', '#e8e8e8', '#c8102e', '#e0596f', '#ffffff', '#fde4e8', '#f1bcc5', '#a0a0a0', '#6a1b9a'),
+  jornal_verde: j(false, '#fbfdf9', '#14231a', '#ffffff', '#e1e8df', '#1e7a46', '#5fae82', '#ffffff', '#e3f2e7', '#c3dbc9', '#9bab9e'),
+  jornal_marinho: j(true, '#0e1a2b', '#eef2f8', '#13233a', '#1f3350', '#f2b632', '#b88a1f', '#0e1a2b', '#1a2c47', '#27415f', '#3a4f6b'),
+  // Complementar: azul (matiz 215°) estrutura 90% da tela; laranja (35°, oposto no círculo) só no foco.
+  jornal_complementar: j(false, '#f6f8fc', '#14213d', '#ffffff', '#d9e2f0', '#e8851a', '#f4b878', '#1b1b1b', '#e6edf8', '#c2d1e8', '#9aaac2'),
+  // Teoria das cores (ver docs/mockup-teoria-cores.html)
+  cor_indigo_amarelo: j(false, '#f7f8fd', '#1c2252', '#ffffff', '#d8dcf0', '#f2c230', '#f8dc82', '#1b1b1b', '#e7eaf8', '#c3cae9', '#9aa3c9'),
+  cor_teal_coral: j(false, '#f4faf9', '#0d3b3a', '#ffffff', '#d3ebe8', '#ee5a5f', '#f6a3a6', '#1b1b1b', '#e2f3f1', '#b9ddd9', '#8fb5b1', '#8a1c20'),
+  cor_magenta_verde: j(false, '#fcf6fa', '#3d1030', '#ffffff', '#efd6e6', '#3fb26e', '#9bd9b6', '#0f2a1a', '#f6e4ef', '#e3bdd3', '#c29ab3'),
+  cor_oceano: j(false, '#f3fafb', '#0b3040', '#ffffff', '#d4e6f4', '#0a6f86', '#2f8aa0', '#ffffff', '#e0f2ee', '#b6e0d3', '#93b3be'),
+  cor_triade: j(false, '#fbfbf7', '#1a1a2e', '#ffffff', '#dfe6f5', '#f26a45', '#f7a98f', '#1b1b1b', '#e4f3e4', '#bfe0c0', '#a0a8c0', '#7a1fa2'),
+  cor_split: j(false, '#f7f9fd', '#14233f', '#ffffff', '#d9e3f4', '#e8590c', '#f6a373', '#1b1b1b', '#f1f2d0', '#d9de9c', '#a0abc0', '#7a1fa2'),
+  cor_violeta: j(false, '#faf7fd', '#2a1347', '#ffffff', '#e4d9f2', '#6a35b8', '#8a63cc', '#ffffff', '#f0e8f9', '#d5c3ec', '#b3a1cc'),
+  cor_noturno_teal_coral: j(true, '#0b1f21', '#e6f4f2', '#102a2c', '#1b3c3f', '#ff6b6f', '#d9666a', '#1b1b1b', '#153235', '#1f4a4e', '#2f5d60'),
 };
 
-export const THEMES: { id: ThemeId; label: string }[] = [
-  { id: 'system', label: 'Sistema (claro/escuro)' },
-  { id: 'light', label: 'Claro' },
-  { id: 'dark', label: 'Escuro' },
-  { id: 'monokai', label: 'Monokai' },
-  { id: 'dracula', label: 'Dracula' },
-  { id: 'one_dark', label: 'One Dark Pro' },
-  { id: 'tokyo_night', label: 'Tokyo Night' },
-  { id: 'nord', label: 'Nord' },
-  { id: 'gruvbox', label: 'Gruvbox Dark' },
-  { id: 'catppuccin', label: 'Catppuccin Mocha' },
-  { id: 'solarized_dark', label: 'Solarized Dark' },
-  { id: 'solarized_light', label: 'Solarized Light' },
-  { id: 'github_light', label: 'GitHub Light' },
+export type ThemeGroup = 'Básicos' | 'Editores de código' | 'Jornal' | 'Teoria das cores';
+
+export const THEMES: { id: ThemeId; label: string; group: ThemeGroup }[] = [
+  { id: 'system', label: 'Sistema (claro/escuro)', group: 'Básicos' },
+  { id: 'light', label: 'Claro', group: 'Básicos' },
+  { id: 'dark', label: 'Escuro', group: 'Básicos' },
+  { id: 'monokai', label: 'Monokai', group: 'Editores de código' },
+  { id: 'dracula', label: 'Dracula', group: 'Editores de código' },
+  { id: 'one_dark', label: 'One Dark Pro', group: 'Editores de código' },
+  { id: 'tokyo_night', label: 'Tokyo Night', group: 'Editores de código' },
+  { id: 'nord', label: 'Nord', group: 'Editores de código' },
+  { id: 'gruvbox', label: 'Gruvbox Dark', group: 'Editores de código' },
+  { id: 'catppuccin', label: 'Catppuccin Mocha', group: 'Editores de código' },
+  { id: 'solarized_dark', label: 'Solarized Dark', group: 'Editores de código' },
+  { id: 'solarized_light', label: 'Solarized Light', group: 'Editores de código' },
+  { id: 'github_light', label: 'GitHub Light', group: 'Editores de código' },
+  { id: 'jornal_claro', label: 'Jornal Claro', group: 'Jornal' },
+  { id: 'jornal_sepia', label: 'Jornal Sépia', group: 'Jornal' },
+  { id: 'jornal_noturno', label: 'Jornal Noturno', group: 'Jornal' },
+  { id: 'jornal_tinta', label: 'Jornal Tinta', group: 'Jornal' },
+  { id: 'jornal_salmao', label: 'Jornal Salmão', group: 'Jornal' },
+  { id: 'jornal_tabloide', label: 'Jornal Tabloide', group: 'Jornal' },
+  { id: 'jornal_verde', label: 'Jornal Verde', group: 'Jornal' },
+  { id: 'jornal_marinho', label: 'Jornal Marinho', group: 'Jornal' },
+  { id: 'jornal_complementar', label: 'Jornal Complementar (azul + laranja)', group: 'Jornal' },
+  { id: 'cor_indigo_amarelo', label: 'Índigo + Amarelo (complementar)', group: 'Teoria das cores' },
+  { id: 'cor_teal_coral', label: 'Verde-azulado + Coral (complementar)', group: 'Teoria das cores' },
+  { id: 'cor_magenta_verde', label: 'Magenta + Verde-folha (complementar)', group: 'Teoria das cores' },
+  { id: 'cor_oceano', label: 'Oceano (análogas)', group: 'Teoria das cores' },
+  { id: 'cor_triade', label: 'Tríade vívida', group: 'Teoria das cores' },
+  { id: 'cor_split', label: 'Split-complementar', group: 'Teoria das cores' },
+  { id: 'cor_violeta', label: 'Monocromático Violeta', group: 'Teoria das cores' },
+  { id: 'cor_noturno_teal_coral', label: 'Noturno Teal + Coral', group: 'Teoria das cores' },
 ];
 
 export const isThemeId = (v: unknown): v is ThemeId => THEMES.some((t) => t.id === v);
@@ -92,10 +155,20 @@ export function applyTheme(id: ThemeId): void {
   s.setProperty('--variant', pal.variant);
   s.setProperty('--fg', pal.fg);
   s.setProperty('--primary', pal.primary);
-  s.setProperty('--on-primary', onColor(pal.primary));
+  const x = pal.extras;
+  s.setProperty('--on-primary', x?.selFg ?? onColor(pal.primary));
   s.setProperty('--secondary', pal.secondary);
   s.setProperty('--tertiary', pal.tertiary);
   s.setProperty('--error', pal.error);
   s.setProperty('--outline', pal.outline);
   s.setProperty('color-scheme', pal.dark ? 'dark' : 'light');
+  // Sem extras (temas antigos), as variáveis somem e o CSS cai nos valores padrão.
+  const extras: [string, string | undefined][] = [
+    ['--empty', x?.empty], ['--given', x?.given], ['--peer', x?.peer], ['--peer-filled', x?.peerFilled],
+    ['--same', x?.same], ['--same-fg', x?.selFg], ['--user-fg', x ? pal.fg : undefined],
+  ];
+  for (const [name, value] of extras) {
+    if (value) s.setProperty(name, value);
+    else s.removeProperty(name);
+  }
 }

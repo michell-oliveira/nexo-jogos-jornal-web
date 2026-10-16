@@ -50,6 +50,8 @@ body {
   cursor: pointer;
 }
 .btn:hover { border-color: var(--outline); }
+a.btn { display: inline-block; text-decoration: none; }
+a.btn[hidden] { display: none; }
 .btn:disabled { opacity: 0.45; cursor: default; }
 .btn.primary { background: var(--primary); color: var(--on-primary); }
 .btn.wide { width: 100%; padding: 14px; font-size: 16px; }
@@ -82,7 +84,16 @@ body {
   cursor: pointer;
   font-size: 14px;
 }
-.themeList li:hover { background: var(--variant); }
+.themeList li.themeGroup {
+  cursor: default;
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--fg) 60%, var(--surface));
+}
+.themeList li:not(.themeGroup):hover { background: var(--variant); }
 .themeList li[aria-selected='true'] { outline: 2px solid var(--primary); }
 .dots { display: inline-flex; }
 .dots i {
@@ -92,6 +103,28 @@ body {
   border: 1px solid var(--outline);
   margin-right: -4px;
 }
+
+/* Hub de jogos */
+.hub { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; padding-top: 20px; }
+.hubCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  color: var(--fg);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+}
+a.hubCard:hover { border-color: var(--primary); }
+.hubCard.soon { opacity: 0.55; }
+.hubIcon { font-size: 30px; width: 40px; text-align: center; flex: none; }
+.hubText { display: grid; gap: 2px; }
+.hubText strong { font: 800 18px Georgia, 'Times New Roman', serif; }
+.hubText small { font-size: 13px; color: color-mix(in srgb, var(--fg) 70%, var(--surface)); }
+.hubBadge { position: absolute; top: 8px; right: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 
 /* Início */
 .home { padding-top: 20px; max-width: 420px; margin: 0 auto; }
@@ -124,7 +157,7 @@ body {
   font-size: calc(var(--cell) * 0.62);
   font-weight: 700;
   color: var(--fg);
-  background: var(--bg);
+  background: var(--empty, var(--bg));
   border: 0.5px solid var(--outline);
   border-radius: 0;
   cursor: pointer;
@@ -133,9 +166,13 @@ body {
 }
 .cell.bR { border-right: 2px solid var(--fg); }
 .cell.bB { border-bottom: 2px solid var(--fg); }
-.cell.related { background: var(--variant); }
-.cell.match { background: color-mix(in srgb, var(--primary) 32%, var(--bg)); }
-.cell.user { color: var(--primary); font-weight: 500; }
+.cell.given { background: var(--given, var(--empty, var(--bg))); }
+.cell.related { background: var(--peer, var(--variant)); }
+.cell.related.filled { background: var(--peer-filled, var(--peer, var(--variant))); }
+.cell.match { background: var(--same, color-mix(in srgb, var(--primary) 32%, var(--bg))); }
+.cell.user { color: var(--user-fg, var(--primary)); font-weight: 500; }
+.cell.match:not(.user) { color: var(--same-fg, var(--fg)); }
+.cell.match.user { color: var(--same-fg, var(--user-fg, var(--primary))); }
 .cell.conflict { color: var(--error); }
 .cell.selected { background: var(--primary); color: var(--on-primary); }
 .cell.selected.conflict { box-shadow: inset 0 0 0 3px var(--error); }
@@ -210,3 +247,215 @@ body {
 .win h2 { margin: 0 0 8px; font: 800 30px Georgia, serif; }
 .win p { margin: 0 0 20px; font-size: 18px; }
 .winBtns { display: flex; gap: 10px; justify-content: center; }
+
+/* Compartilhado entre jogos */
+.levelBtn { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.levelBtn small { font-size: 12px; opacity: 0.7; }
+.helpBtn { margin-top: 18px; }
+.btn.on { background: var(--primary); color: var(--on-primary); }
+.winBody p { margin: 0 0 16px; font-size: 16px; }
+.hint { text-align: center; font-size: 13px; opacity: 0.7; }
+.status { align-items: center; }
+
+/* 2048 */
+.scores { display: flex; justify-content: center; gap: 12px; padding: 12px 0 8px; }
+.scoreBox { min-width: 96px; padding: 6px 14px; text-align: center; background: var(--variant); border-radius: 8px; }
+.scoreBox small { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+.scoreBox strong { font-size: 20px; }
+.grid2048 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: var(--board);
+  aspect-ratio: 1;
+  margin: 4px auto 0;
+  padding: 8px;
+  background: var(--outline);
+  border-radius: 12px;
+  touch-action: none;
+  user-select: none;
+}
+.tile2048 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--board) * 0.1);
+  font-weight: 800;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg) 55%, var(--outline));
+  border-radius: 8px;
+}
+.tile2048.has { background: color-mix(in srgb, var(--primary) var(--lvl), var(--variant)); }
+.tile2048.strong { color: var(--on-primary); }
+.tile2048.big { font-size: calc(var(--board) * 0.075); }
+.tile2048.pop { animation: pop 0.15s ease-out; }
+@keyframes pop { from { transform: scale(0.6); } to { transform: scale(1); } }
+
+/* Lights Out */
+.lightsBoard {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  width: var(--board);
+  aspect-ratio: 1;
+  margin: 12px auto 0;
+}
+.light {
+  border: 2px solid var(--outline);
+  border-radius: 12px;
+  background: var(--variant);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.light.on { background: var(--tertiary); border-color: var(--tertiary); box-shadow: 0 0 14px color-mix(in srgb, var(--tertiary) 70%, transparent); }
+.light.hint { outline: 4px solid var(--primary); outline-offset: 2px; }
+
+/* Campo Minado */
+.minesBoard {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  width: var(--board);
+  margin: 12px auto 0;
+  border: 3px solid var(--fg);
+  touch-action: manipulation;
+  user-select: none;
+}
+.mcell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font: 800 clamp(14px, 4.4vw, 24px) system-ui, sans-serif;
+  color: var(--fg);
+  background: var(--variant);
+  border: 1px solid var(--outline);
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mcell.open { background: var(--bg); cursor: default; }
+.mcell.boom { background: var(--error); }
+.mcell.n1 { color: #1e88e5; } .mcell.n2 { color: #43a047; } .mcell.n3 { color: #e53935; } .mcell.n4 { color: #8e24aa; }
+.mcell.n5 { color: #fb8c00; } .mcell.n6 { color: #00acc1; } .mcell.n7 { color: var(--fg); } .mcell.n8 { color: var(--outline); }
+
+/* Takuzu */
+.takuzuBoard {
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  width: var(--board);
+  margin: 12px auto 0;
+  border: 3px solid var(--fg);
+}
+.tcell {
+  aspect-ratio: 1;
+  padding: 0;
+  font: 800 clamp(18px, 6vw, 32px) system-ui, sans-serif;
+  color: var(--primary);
+  background: var(--bg);
+  border: 1px solid var(--outline);
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tcell.given { color: var(--fg); background: var(--variant); cursor: default; }
+.tcell.conflict { color: var(--error); background: color-mix(in srgb, var(--error) 18%, var(--bg)); }
+.tcell.given.conflict { background: color-mix(in srgb, var(--error) 18%, var(--variant)); }
+
+/* Number Match */
+.matchBoard {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  width: var(--board);
+  max-height: 62vh;
+  margin: 12px auto 0;
+  overflow-y: auto;
+  border: 3px solid var(--fg);
+  background: var(--bg);
+}
+.mt {
+  aspect-ratio: 1;
+  padding: 0;
+  font: 800 clamp(16px, 5.4vw, 28px) system-ui, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--outline);
+  border-radius: 0;
+  cursor: pointer;
+}
+.mt:disabled { cursor: default; background: var(--surface); }
+.mt.selected { background: var(--primary); color: var(--on-primary); }
+.mt.hint { outline: 3px solid var(--tertiary); outline-offset: -3px; }
+
+/* Palavras Cifradas tem várias linhas: o teclado fica fixo no rodapé para não exigir rolagem a cada letra */
+.cipher .kbd { position: sticky; bottom: 0; z-index: 1; padding: 8px 0 10px; background: var(--bg); }
+
+/* Palavras: teclado, Termo, Forca, Anagrama */
+.kbd { width: min(100%, 520px); margin: 12px auto 0; display: grid; gap: 6px; }
+.krow { display: flex; justify-content: center; gap: 4px; }
+.key {
+  flex: 1 1 0; max-width: 46px; min-height: 46px; padding: 0;
+  font: 700 16px system-ui, sans-serif; color: var(--fg); background: var(--variant);
+  border: 0; border-radius: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.key.wideKey { max-width: 64px; flex-grow: 1.4; }
+.key.hit { background: var(--primary); color: var(--on-primary); }
+.key.present { background: var(--tertiary); color: #000; }
+.key.miss { opacity: 0.45; }
+.key:disabled { opacity: 0.4; cursor: default; }
+
+.termoBoard { display: grid; gap: 6px; width: min(100%, 320px); margin: 12px auto 0; }
+.trow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.tl {
+  aspect-ratio: 1; display: grid; place-items: center;
+  font: 800 clamp(20px, 7vw, 30px) system-ui, sans-serif; background: var(--bg);
+  border: 2px solid var(--outline); border-radius: 4px;
+}
+.tl.cur { border-color: var(--fg); }
+.tl.locked { color: var(--primary); }
+.tl.hit { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.tl.present { background: var(--tertiary); border-color: var(--tertiary); color: #000; }
+.tl.miss { background: var(--variant); border-color: var(--variant); color: var(--fg); }
+.termoMsg { min-height: 1.4em; margin: 8px 0 0; text-align: center; color: var(--error); font-size: 14px; }
+
+.clue { text-align: center; margin: 8px 0; }
+.gallows { display: block; width: min(60vw, 200px); height: auto; margin: 4px auto; color: var(--fg); }
+.hangWord { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 8px 0; }
+.hl {
+  min-width: 1.1em; padding: 0 2px; text-align: center;
+  font: 800 clamp(22px, 7vw, 32px) system-ui, sans-serif; border-bottom: 3px solid var(--fg);
+}
+.hl.missed { color: var(--error); }
+.hangWrong { min-height: 1.4em; margin: 0; text-align: center; color: var(--error); }
+
+.anaSlots, .anaPool { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 12px 0; }
+.ana {
+  width: 44px; height: 48px; padding: 0; font: 800 22px system-ui, sans-serif;
+  color: var(--fg); background: var(--variant); border: 0; border-radius: 6px; cursor: pointer;
+}
+.ana:disabled { opacity: 0.35; cursor: default; }
+.ana.slot { background: var(--bg); border: 2px solid var(--outline); }
+.ana.slot:disabled { opacity: 1; }
+.ana.slot.ok { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.ana.slot.bad { border-color: var(--error); color: var(--error); }
+
+/* Criptograma e Palavras Cifradas */
+.cryptoPhrase { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 16px; margin: 12px 0; }
+.cryptoWord, .cipherCells { display: flex; gap: 3px; }
+.cryptoCell {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  width: clamp(26px, 8vw, 36px); height: clamp(44px, 12vw, 54px); padding: 0;
+  color: var(--fg); background: var(--variant); border: 2px solid transparent; border-radius: 6px; cursor: pointer;
+}
+.cryptoCell small { font: 600 11px system-ui, sans-serif; opacity: 0.7; }
+.cryptoCell span { min-height: 1.2em; font: 800 clamp(16px, 5vw, 22px) system-ui, sans-serif; }
+.cryptoCell.sel { border-color: var(--primary); }
+.cryptoCell.same { background: var(--outline); }
+.cryptoCell.given { background: var(--bg); border-color: var(--outline); }
+.cryptoCell.given.sel { border-color: var(--primary); }
+.cryptoCell.bad span { color: var(--error); }
+.cipherRows { display: grid; gap: 10px; margin: 8px 0; }
+.cipherRow { display: grid; justify-items: center; gap: 4px; }
+.cipherClue { margin: 0; font-size: 13px; opacity: 0.8; text-align: center; }
+.cipherRow.done .cryptoCell { background: var(--primary); color: var(--on-primary); }
+.cipherRow.wrong .cryptoCell span { color: var(--error); }

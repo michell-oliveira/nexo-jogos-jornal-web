@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — temas pela teoria das cores</title>
+<style>
+  body{margin:0;padding:24px;background:#e9e9e9;font-family:system-ui,sans-serif;color:#222}
+  h1{font-size:20px;margin:0 0 4px} .sub{margin:0 0 20px;font-size:14px;opacity:.7;max-width:760px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}
+  .card{border-radius:10px;overflow:hidden;box-shadow:0 1px 6px #0003;background:var(--bg);color:var(--fg);padding:14px 14px 16px}
+  .tag{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .tag b{font:900 22px Georgia,'Times New Roman',serif}
+  .tag span{font-size:12px;opacity:.7}
+  .name{font:700 13px system-ui;margin:0 0 8px;padding:3px 8px;border-radius:99px;display:inline-block;background:var(--btn);color:var(--btnfg)}
+  .desc{font-size:12px;opacity:.8;margin:0 0 8px;min-height:48px}
+  .wheel{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .wheel span{display:inline-flex;align-items:center;gap:5px;font-size:11px}
+  .wheel i{width:14px;height:14px;border-radius:50%;border:1px solid #0004}
+  .board{display:grid;grid-template-columns:repeat(9,1fr);border:2px solid var(--thick);background:var(--line);gap:1px;aspect-ratio:1}
+  .c{display:grid;place-items:center;font:800 clamp(14px,4.4vw,22px) system-ui,sans-serif;background:var(--empty);aspect-ratio:1}
+  .c.g{background:var(--given)} .c.pe{background:var(--peer)} .c.pf{background:var(--peerf)}
+  .c.same{background:var(--same);color:var(--selfg)} .c.sel{background:var(--sel);color:var(--selfg)}
+  .c.b-r{margin-right:1px;box-shadow:1px 0 0 var(--thick)} .c.b-b{box-shadow:0 1px 0 var(--thick)} .c.b-r.b-b{box-shadow:1px 0 0 var(--thick),0 1px 0 var(--thick)}
+  .bar{display:flex;gap:8px;margin-top:10px}
+  .bar i{font:600 12px system-ui;font-style:normal;padding:6px 12px;border-radius:4px;border:1px solid var(--line)}
+  .bar i.on{background:var(--btn);color:var(--btnfg);border-color:var(--btn)}
+</style>
+</head>
+<body>
+<h1>Temas pela teoria das cores</h1>
+<p class="sub">Mesmo tabuleiro em cada cartão. As bolinhas mostram as matizes usadas (ângulo no círculo cromático). Regra aplicada: ~60% neutro, ~30% cor de estrutura (faixas e células fixas), ~10% cor de foco (seleção e números iguais).</p>
+<div class="grid" id="grid"></div>
+<script>
+const PUZZLE = ['..156..93','86.3.4...','3528....6','.35.9..2.','218.56...','......157','62.98....','..31..4..','19.64.5..'].join('');
+
+const THEMES = [
+  { name:'Índigo + Amarelo', tag:'Complementar', desc:'Índigo (229°) e amarelo (46°) são opostos: o azul acalma a grade e o amarelo salta aos olhos só na seleção.',
+    wheel:[['#3a4fa8','229° estrutura'],['#f2c230','46° foco']],
+    v:{bg:'#f7f8fd',fg:'#1c2252',empty:'#ffffff',given:'#d8dcf0',sel:'#f2c230',same:'#f8dc82',selfg:'#1b1b1b',peer:'#e7eaf8',peerf:'#c3cae9',line:'#9aa3c9',thick:'#1c2252',btn:'#1c2252',btnfg:'#ffffff'} },
+  { name:'Verde-azulado + Coral', tag:'Complementar', desc:'Teal (175°) com coral (355°): par muito usado em design por equilibrar frio e quente sem agredir.',
+    wheel:[['#2a9d8f','175° estrutura'],['#ee5a5f','355° foco']],
+    v:{bg:'#f4faf9',fg:'#0d3b3a',empty:'#ffffff',given:'#d3ebe8',sel:'#ee5a5f',same:'#f6a3a6',selfg:'#1b1b1b',peer:'#e2f3f1',peerf:'#b9ddd9',line:'#8fb5b1',thick:'#0d3b3a',btn:'#0d3b3a',btnfg:'#ffffff'} },
+  { name:'Magenta + Verde-folha', tag:'Complementar', desc:'Magenta (320°) com verde (143°): contraste forte e elegante, bom para quem gosta de cor.',
+    wheel:[['#b5428c','320° estrutura'],['#3fb26e','143° foco']],
+    v:{bg:'#fcf6fa',fg:'#3d1030',empty:'#ffffff',given:'#efd6e6',sel:'#3fb26e',same:'#9bd9b6',selfg:'#0f2a1a',peer:'#f6e4ef',peerf:'#e3bdd3',line:'#c29ab3',thick:'#3d1030',btn:'#3d1030',btnfg:'#ffffff'} },
+  { name:'Oceano Análogo', tag:'Análogas (150° a 210°)', desc:'Cores vizinhas no círculo (verde, turquesa, azul): harmonia suave, sem contraste forte. Visual calmo e contínuo.',
+    wheel:[['#3aa88b','160° faixa'],['#0a6f86','192° foco'],['#4a90c9','208° células fixas']],
+    v:{bg:'#f3fafb',fg:'#0b3040',empty:'#ffffff',given:'#d4e6f4',sel:'#0a6f86',same:'#2f8aa0',selfg:'#ffffff',peer:'#e0f2ee',peerf:'#b6e0d3',line:'#93b3be',thick:'#0b3040',btn:'#0b3040',btnfg:'#ffffff'} },
+  { name:'Tríade Vívida', tag:'Tríade (0°, 120°, 240°)', desc:'Três cores a 120° uma da outra. Tons suavizados para não virar “bandeira”: azul nas células fixas, verde nas faixas, vermelho no foco.',
+    wheel:[['#4a6fc4','225° células fixas'],['#4caf67','125° faixas'],['#f26a45','14° foco']],
+    v:{bg:'#fbfbf7',fg:'#1a1a2e',empty:'#ffffff',given:'#dfe6f5',sel:'#f26a45',same:'#f7a98f',selfg:'#1b1b1b',peer:'#e4f3e4',peerf:'#bfe0c0',line:'#a0a8c0',thick:'#1a1a2e',btn:'#1a1a2e',btnfg:'#ffffff'} },
+  { name:'Split-complementar', tag:'Azul + (10° e 70°)', desc:'Em vez do oposto exato (40°), usa os dois vizinhos dele: laranja-avermelhado no foco e verde-amarelado nas faixas. Mais variedade, menos tensão.',
+    wheel:[['#4a6fa8','220° estrutura'],['#e8590c','21° foco'],['#c8cf6a','68° faixas']],
+    v:{bg:'#f7f9fd',fg:'#14233f',empty:'#ffffff',given:'#d9e3f4',sel:'#e8590c',same:'#f6a373',selfg:'#1b1b1b',peer:'#f1f2d0',peerf:'#d9de9c',line:'#a0abc0',thick:'#14233f',btn:'#14233f',btnfg:'#ffffff'} },
+  { name:'Monocromático Violeta', tag:'Uma matiz (270°)', desc:'Só roxo em claridades diferentes: o mais harmonioso e sóbrio. O foco vem do escuro (seleção), não de outra cor.',
+    wheel:[['#e4d9f2','270° claro'],['#8a63cc','270° médio'],['#6a35b8','270° escuro']],
+    v:{bg:'#faf7fd',fg:'#2a1347',empty:'#ffffff',given:'#e4d9f2',sel:'#6a35b8',same:'#8a63cc',selfg:'#ffffff',peer:'#f0e8f9',peerf:'#d5c3ec',line:'#b3a1cc',thick:'#2a1347',btn:'#2a1347',btnfg:'#ffffff'} },
+  { name:'Noturno Teal + Coral', tag:'Complementar, escuro', desc:'O par teal/coral no modo escuro: fundo verde-petróleo profundo e coral brilhante só no foco.',
+    wheel:[['#153235','175° estrutura'],['#ff6b6f','357° foco']],
+    v:{bg:'#0b1f21',fg:'#e6f4f2',empty:'#102a2c',given:'#1b3c3f',sel:'#ff6b6f',same:'#d9666a',selfg:'#1b1b1b',peer:'#153235',peerf:'#1f4a4e',line:'#2f5d60',thick:'#bfe6e1',btn:'#ff6b6f',btnfg:'#1b1b1b'} },
+];
+
+const SEL = 1 * 9 + 3;
+const selDigit = PUZZLE[SEL];
+const row = (i) => Math.floor(i / 9), col = (i) => i % 9;
+const box = (i) => Math.floor(row(i) / 3) * 3 + Math.floor(col(i) / 3);
+
+function board() {
+  let h = '';
+  for (let i = 0; i < 81; i++) {
+    const d = PUZZLE[i], filled = d !== '.';
+    const peer = i !== SEL && (row(i) === row(SEL) || col(i) === col(SEL) || box(i) === box(SEL));
+    const cls = ['c'];
+    if (i === SEL) cls.push('sel');
+    else if (filled && d === selDigit) cls.push('same');
+    else if (peer) cls.push(filled ? 'pf' : 'pe');
+    else if (filled) cls.push('g');
+    if (col(i) % 3 === 2 && col(i) < 8) cls.push('b-r');
+    if (row(i) % 3 === 2 && row(i) < 8) cls.push('b-b');
+    h += `<div class="${cls.join(' ')}">${filled ? d : ''}</div>`;
+  }
+  return h;
+}
+
+document.getElementById('grid').innerHTML = THEMES.map((t) => `
+  <div class="card" style="${Object.entries(t.v).map(([k, x]) => `--${k}:${x}`).join(';')}">
+    <div class="tag"><b>Sudoku</b><span>15 de outubro de 2026</span></div>
+    <div class="name">${t.name}</div>
+    <p class="desc"><b>${t.tag}.</b> ${t.desc}</p>
+    <div class="wheel">${t.wheel.map(([c, l]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>
+    <div class="board">${board()}</div>
+    <div class="bar"><i class="on">Normal</i><i>Anotação</i><i>Desfazer</i></div>
+  </div>`).join('');
+</script>
+</body>
+</html>
