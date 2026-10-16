@@ -3,6 +3,8 @@
   "name": "nexo-jogos-jornal-web",
   "main": "worker/index.ts",
   "compatibility_date": "2026-07-11",
+  "routes": [{ "pattern": "nexohorizonte.com.br/jogos-jornal*", "zone_name": "nexohorizonte.com.br" }],
+  "kv_namespaces": [{ "binding": "USERS", "id": "5edf350a3fe4421fac2aa2f80633e350" }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

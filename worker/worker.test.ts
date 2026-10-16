@@ -93,7 +93,7 @@ describe('Worker', () => {
     const res = await worker.fetch(post('/login', 'user=michell&password=senha-de-teste-longa-123'), env());
     expect(res.status).toBe(303);
     const cookie = res.headers.get('Set-Cookie') ?? '';
-    expect(cookie).toMatch(/^__Host-jj_session=v1\./);
+    expect(cookie).toMatch(/^__Host-jj_session=v2\./);
     for (const f of ['HttpOnly', 'Secure', 'SameSite=Strict', 'Path=/']) expect(cookie).toContain(f);
     const game = await worker.fetch(new Request('https://jogos.test/', { headers: { Cookie: cookie.split(';')[0]! } }), env());
     expect(game.status).toBe(200);
@@ -170,5 +170,69 @@ describe('Worker', () => {
     const cookie = (login.headers.get('Set-Cookie') ?? '').split(';')[0]!;
     const res = await worker.fetch(new Request('https://jogos.test/', { method: 'POST', headers: { Cookie: cookie } }), env());
     expect(res.status).toBe(405);
+  });
+});
+
+describe('vários usuários (APP_USERS)', () => {
+  const users = JSON.stringify({ 'natalia.oliveira': 'outra-senha-longa-456' });
+  const login = (user: string, pass: string, e: Env, ip: string) =>
+    worker.fetch(post('/login', `user=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`, { 'CF-Connecting-IP': ip }), e);
+
+  it('aceita o usuário extra e o legado, cada um com a própria senha', async () => {
+    const e = env({ APP_USERS: users });
+    expect((await login('natalia.oliveira', 'outra-senha-longa-456', e, 'ip-u1')).status).toBe(303);
+    expect((await login('michell', 'senha-de-teste-longa-123', e, 'ip-u2')).status).toBe(303);
+  });
+
+  it('rejeita senha cruzada entre contas', async () => {
+    const e = env({ APP_USERS: users });
+    expect((await login('natalia.oliveira', 'senha-de-teste-longa-123', e, 'ip-u3')).status).toBe(401);
+    expect((await login('michell', 'outra-senha-longa-456', e, 'ip-u4')).status).toBe(401);
+  });
+
+  it('funciona só com APP_USERS (sem o par legado) e falha fechada sem nenhuma conta', async () => {
+    const only = env({ APP_USER: undefined, APP_PASSWORD: undefined, APP_USERS: users });
+    expect((await login('natalia.oliveira', 'outra-senha-longa-456', only, 'ip-u5')).status).toBe(303);
+    const none = env({ APP_USER: undefined, APP_PASSWORD: undefined });
+    expect((await worker.fetch(new Request('https://jogos.test/login'), none)).status).toBe(503);
+  });
+
+  it('APP_USERS malformado é ignorado e não derruba o login legado', async () => {
+    for (const bad of ['{nao-json', '[]', '"texto"', '{"x":123}', '{"":"senha"}']) {
+      const e = env({ APP_USERS: bad });
+      expect((await login('michell', 'senha-de-teste-longa-123', e, `ip-bad-${bad.length}`)).status).toBe(303);
+      expect((await login('x', 'senha', e, `ip-bad2-${bad.length}`)).status).toBe(401);
+    }
+  });
+});
+
+describe('publicação sob /jogos-jornal', () => {
+  const host = 'https://nexohorizonte.com.br';
+
+  it('sem sessão redireciona para o login prefixado', async () => {
+    const res = await worker.fetch(new Request(`${host}/jogos-jornal/`), env());
+    expect(res.headers.get('Location')).toBe('/jogos-jornal/login');
+  });
+
+  it('/jogos-jornal sem barra vai para a barra final', async () => {
+    const res = await worker.fetch(new Request(`${host}/jogos-jornal`), env());
+    expect(res.headers.get('Location')).toBe('/jogos-jornal/');
+  });
+
+  it('login ok volta ao prefixo e busca assets sem ele', async () => {
+    let fetched = '';
+    const e = env({ ASSETS: { fetch: async (r) => ((fetched = new URL(r.url).pathname), new Response('ok')) } });
+    const login = await worker.fetch(
+      new Request(`${host}/jogos-jornal/login`, {
+        method: 'POST',
+        body: 'user=michell&password=senha-de-teste-longa-123',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: host, 'CF-Connecting-IP': 'ip-base' },
+      }),
+      e,
+    );
+    expect(login.headers.get('Location')).toBe('/jogos-jornal/');
+    const cookie = (login.headers.get('Set-Cookie') ?? '').split(';')[0]!;
+    await worker.fetch(new Request(`${host}/jogos-jornal/assets/a.js`, { headers: { Cookie: cookie } }), e);
+    expect(fetched).toBe('/assets/a.js');
   });
 });

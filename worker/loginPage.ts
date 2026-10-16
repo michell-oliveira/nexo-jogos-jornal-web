@@ -23,7 +23,7 @@ button{font:inherit;font-weight:600;padding:12px;border:0;border-radius:6px;back
 </style>
 </head>
 <body>
-<form method="post" action="/login">
+<form method="post" action="login">
 <h1>Sudoku</h1>
 <p>Jogos de Jornal — acesso restrito</p>
 <label>Usuário<input name="user" autocomplete="username" maxlength="200" required autofocus></label>

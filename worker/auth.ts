@@ -28,23 +28,46 @@ const fromB64url = (text: string): Uint8Array<ArrayBuffer> | null => {
 const hmacKey = (secret: string, usage: KeyUsage[]): Promise<CryptoKey> =>
   crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, usage);
 
-/** Cria o valor do cookie de sessão: `v1.<expira em s>.<assinatura>`. */
-export async function createSession(secret: string, nowMs: number): Promise<string> {
-  const payload = `v1.${Math.floor(nowMs / 1000) + SESSION_SECONDS}`;
+/**
+ * Cria o valor do cookie de sessão. Sem usuário: `v1.<expira em s>.<assinatura>` (formato antigo).
+ * Com usuário: `v2.<expira em s>.<usuário em base64url>.<assinatura>`, para o Worker saber quem é (ex.: admin).
+ */
+export async function createSession(secret: string, nowMs: number, user?: string): Promise<string> {
+  const exp = Math.floor(nowMs / 1000) + SESSION_SECONDS;
+  const payload = user === undefined ? `v1.${exp}` : `v2.${exp}.${b64url(enc.encode(user))}`;
   const sig = await crypto.subtle.sign('HMAC', await hmacKey(secret, ['sign']), enc.encode(payload));
   return `${payload}.${b64url(new Uint8Array(sig))}`;
 }
 
-/** Valida formato, expiração e assinatura (verificação em tempo constante pelo WebCrypto). */
-export async function verifySession(secret: string, token: string | undefined, nowMs: number): Promise<boolean> {
-  if (!token || token.length > 200) return false;
+/** Valida o token (formato, expiração, assinatura em tempo constante) e devolve o usuário (null no v1). */
+export async function openSession(secret: string, token: string | undefined, nowMs: number): Promise<{ user: string | null } | null> {
+  if (!token || token.length > 600) return null;
   const parts = token.split('.');
-  if (parts.length !== 3 || parts[0] !== 'v1') return false;
+  const version = parts[0];
+  if (!((version === 'v1' && parts.length === 3) || (version === 'v2' && parts.length === 4))) return null;
   const exp = Number(parts[1]);
-  if (!Number.isInteger(exp) || exp <= Math.floor(nowMs / 1000)) return false;
-  const sig = fromB64url(parts[2] ?? '');
-  if (!sig) return false;
-  return crypto.subtle.verify('HMAC', await hmacKey(secret, ['verify']), sig, enc.encode(`v1.${parts[1]}`));
+  if (!Number.isInteger(exp) || exp <= Math.floor(nowMs / 1000)) return null;
+  const sig = fromB64url(parts[parts.length - 1] ?? '');
+  if (!sig) return null;
+  const payload = parts.slice(0, -1).join('.');
+  if (!(await crypto.subtle.verify('HMAC', await hmacKey(secret, ['verify']), sig, enc.encode(payload)))) return null;
+  if (version === 'v1') return { user: null };
+  const raw = fromB64url(parts[2] ?? '');
+  if (!raw) return null;
+  try {
+    return { user: new TextDecoder('utf-8', { fatal: true }).decode(raw) };
+  } catch {
+    return null;
+  }
+}
+
+export async function verifySession(secret: string, token: string | undefined, nowMs: number): Promise<boolean> {
+  return (await openSession(secret, token, nowMs)) !== null;
+}
+
+/** Usuário da sessão válida; `null` se a sessão é inválida ou do formato antigo (sem identidade). */
+export async function sessionUser(secret: string, token: string | undefined, nowMs: number): Promise<string | null> {
+  return (await openSession(secret, token, nowMs))?.user ?? null;
 }
 
 /** Compara dois textos sem vazar o tamanho nem o ponto da diferença: compara os HMACs de ambos. */
