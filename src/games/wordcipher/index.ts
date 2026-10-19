@@ -56,8 +56,8 @@ function mount(root: HTMLElement): () => void {
       <section class="cipher">
         <div class="status"><button id="menuBtn" class="btn" type="button">Menu</button>
           <span id="progress"></span></div>
-        <div id="rows" class="cipherRows"></div>
         <div class="controls"></div>
+        <div id="rows" class="cipherRows"></div>
       </section>`;
     root.querySelector('#menuBtn')!.addEventListener('click', showMenu);
     const hintBtn = button('Dica', 'btn', () => edit(hint));

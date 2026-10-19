@@ -99,6 +99,7 @@ export function renderMenu(
   }
   wrap.appendChild(levels);
   wrap.appendChild(button('Como jogar', 'btn wide helpBtn', o.onHelp));
+  wrap.appendChild(button('← Voltar aos jogos', 'btn wide', () => { location.hash = ''; }));
   host.appendChild(wrap);
 }
 

@@ -29,7 +29,8 @@ body {
 .top {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 14px 0;
   border-bottom: 1px solid var(--variant);
 }
@@ -453,9 +454,12 @@ a.hubCard:hover { border-color: var(--primary); }
 .cryptoCell.same { background: var(--outline); }
 .cryptoCell.given { background: var(--bg); border-color: var(--outline); }
 .cryptoCell.given.sel { border-color: var(--primary); }
-.cryptoCell.bad span { color: var(--error); }
+/* o vermelho do tema não tem contraste suficiente sobre o fundo da célula em temas escuros: borda + sublinhado ondulado */
+.cryptoCell.bad { border-color: var(--error); }
+.cryptoCell.bad span { text-decoration: underline wavy var(--error); text-underline-offset: 3px; }
 .cipherRows { display: grid; gap: 10px; margin: 8px 0; }
 .cipherRow { display: grid; justify-items: center; gap: 4px; }
 .cipherClue { margin: 0; font-size: 13px; opacity: 0.8; text-align: center; }
 .cipherRow.done .cryptoCell { background: var(--primary); color: var(--on-primary); }
-.cipherRow.wrong .cryptoCell span { color: var(--error); }
+.cipherRow.wrong .cryptoCell:not(.given) { border-color: var(--error); }
+.cipherRow.wrong .cryptoCell span { text-decoration: underline wavy var(--error); text-underline-offset: 3px; }
