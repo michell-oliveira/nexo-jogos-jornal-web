@@ -1,3 +1,4 @@
+import { hasConflictAt } from './highlight';
 import { generatePuzzle, type DifficultyId, DIFFICULTIES } from './generator';
 import { boxOf, candidateMask, type Rng } from './solver';
 
@@ -9,6 +10,8 @@ export interface Snapshot {
   values: number[];
   notes: number[];
   elapsed: number;
+  /** Opcional: partida salva antes do placar não tem; lê como 0. */
+  mistakes?: number;
 }
 
 interface Step {
@@ -32,6 +35,8 @@ export class Game {
     public values: number[] = givens.slice(),
     public notes: number[] = new Array<number>(81).fill(0),
     public elapsed = 0,
+    /** Erros da partida: dígito normal que repete outro da linha/coluna/bloco. Só sobe. */
+    public mistakes = 0,
   ) {}
 
   static create(difficulty: DifficultyId, rng?: Rng): Game {
@@ -46,7 +51,8 @@ export class Game {
     if (!isGrid(s.givens, 9) || !isGrid(s.solution, 9) || !isGrid(s.values, 9) || !isGrid(s.notes, 0x3fe)) return null;
     if (typeof s.elapsed !== 'number' || !(s.elapsed >= 0)) return null;
     if (s.givens.some((g, i) => g !== 0 && s.values![i] !== g)) return null;
-    return new Game(s.difficulty, s.givens, s.solution, s.values, s.notes, s.elapsed);
+    if (s.mistakes !== undefined && !(Number.isInteger(s.mistakes) && s.mistakes >= 0)) return null;
+    return new Game(s.difficulty, s.givens, s.solution, s.values, s.notes, s.elapsed, s.mistakes ?? 0);
   }
 
   snapshot(): Snapshot {
@@ -58,6 +64,7 @@ export class Game {
       values: this.values.slice(),
       notes: this.notes.slice(),
       elapsed: this.elapsed,
+      mistakes: this.mistakes,
     };
   }
 
@@ -80,6 +87,8 @@ export class Game {
     this.values[i] = digit;
     this.notes[i] = 0;
     this.removeFromPeerNotes(i, digit);
+    // Só o conflito conta: valor errado sem conflito não entra (contar daria a dica de que está errado).
+    if (hasConflictAt(this.values, i)) this.mistakes += 1;
     return true;
   }
 

@@ -38,6 +38,17 @@ export function computeHighlights(
   return out;
 }
 
+/** O dígito da célula `i` repete outro da mesma linha, coluna ou bloco? */
+export function hasConflictAt(values: readonly number[], i: number): boolean {
+  const v = values[i];
+  if (!v) return false;
+  for (let j = 0; j < 81; j++) {
+    if (j === i || values[j] !== v) continue;
+    if (Math.floor(i / 9) === Math.floor(j / 9) || i % 9 === j % 9 || boxOf(i) === boxOf(j)) return true;
+  }
+  return false;
+}
+
 /** Células com valor repetido na própria linha, coluna ou bloco. */
 export function findConflicts(values: readonly number[]): boolean[] {
   const out = new Array<boolean>(81).fill(false);

@@ -1,5 +1,6 @@
 import { fmtTime } from '../../core/dom';
 import { createGame, type GameHost } from '../../core/gameShell';
+import { completedDigits } from './domain/digits';
 import { Game } from './domain/game';
 import { DIFFICULTIES, type DifficultyId } from './domain/generator';
 import { computeHighlights, findConflicts } from './domain/highlight';
@@ -106,6 +107,11 @@ function mountView(body: HTMLElement, host: GameHost<Game>, ctx: GameContext) {
     const mask = selected >= 0 && notesMode ? game.notes[selected]! : 0;
     for (const btn of [...popup.querySelectorAll<HTMLButtonElement>('[data-d]'), ...numRow.querySelectorAll<HTMLButtonElement>('[data-d]')]) {
       btn.classList.toggle('noted', (mask & (1 << Number(btn.dataset.d))) !== 0);
+    }
+    // Dígito com 9 ocorrências: o botão some mas o espaço fica (visibility), sem mover os outros.
+    const done = completedDigits(game.values);
+    for (const btn of [...popup.querySelectorAll<HTMLButtonElement>('[data-d]'), ...numRow.querySelectorAll<HTMLButtonElement>('[data-d]')]) {
+      btn.classList.toggle('done', done.has(Number(btn.dataset.d)));
     }
   }
 
@@ -242,9 +248,9 @@ function mountView(body: HTMLElement, host: GameHost<Game>, ctx: GameContext) {
   on('visibilitychange', () => {
     if (game.isSolved()) return;
     if (document.hidden) {
-      host.clock.stop();
+      host.clock.pause();
       host.commit();
-    } else startClock();
+    } else if (!host.paused) host.clock.resume(); // pausa manual vence: a volta da aba não a desfaz
   });
 
   // ---------- Controles ----------
@@ -288,7 +294,7 @@ function mountView(body: HTMLElement, host: GameHost<Game>, ctx: GameContext) {
       closePopup();
       return;
     }
-    if (game.isSolved() || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (game.isSolved() || host.paused || e.ctrlKey || e.metaKey || e.altKey) return;
     if (/^[1-9]$/.test(e.key) && selected >= 0) {
       applyDigit(selected, Number(e.key));
       if (!notesMode) closePopup();
@@ -330,6 +336,8 @@ export const sudoku = createGame<Game, DifficultyId>({
   },
   resumeLabel: (g) => `${DIFFICULTIES[g.difficulty].label} · ${fmtTime(g.elapsed)}`,
   statusText: (g) => `${DIFFICULTIES[g.difficulty].label} · ${fmtTime(g.elapsed)}`,
+  pausable: true,
+  scores: { metrics: (g) => ({ seconds: Math.floor(g.elapsed), errors: g.mistakes }) },
   mountView,
   onOpen: (_g, host) => host.commit(),
   finish: (g) => ({
