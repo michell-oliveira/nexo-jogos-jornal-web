@@ -53,6 +53,13 @@ o catálogo monta. O shell cuida de:
 `onOpen`. O `GameHost<S>` entregue ao jogo expõe `state()`, `update(next)`, `commit()`, `clock`, `status`, `option(name)`,
 `menu()` e `newGame()`.
 
+**Pausa e placar (opcionais, no núcleo).** Para portar a outro jogo basta declarar na `GameDefinition`:
+- `pausable: true` — o shell cria o botão "⏸ Pausar" (cobre o corpo do jogo, `clock.pause()/resume()`; a pausa não é salva).
+  Se o jogo religa o cronômetro por conta própria (ex.: `visibilitychange`), deve checar `host.paused` antes de retomar;
+- `scores: { metrics: (state) => ({ seconds, errors }) }` — ao fim da partida o shell grava UMA entrada em
+  `jj.<id>.scores.v1` (máx. 200, `src/core/scoreboard.ts`) e mostra a tabela ordenável sob o tabuleiro, com botão "Placar ▾/▸"
+  (a escolha é salva por jogo). Quem conta erros guarda o contador no próprio estado (campo opcional no snapshot).
+
 **Serviços do núcleo:** `dom.ts` (`el`, `button`, `fmtTime`, `randInt`, `shuffled`), `dialog.ts` (`dialog`, `helpController`),
 `records.ts` (recorde por nível), `menu.ts`, `option.ts` (opção persistida), `clock.ts` (cronômetro), `gameStore.ts`
 (persistência), `storage.ts` (`localStorage` tolerante a falha, escopo por usuário), `theme.ts`, `catalog.ts`.

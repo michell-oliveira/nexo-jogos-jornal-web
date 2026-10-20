@@ -504,3 +504,20 @@ a.hubCard:hover { border-color: var(--primary); }
 .cipherRow.done .cryptoCell { background: var(--primary); color: var(--on-primary); }
 .cipherRow.wrong .cryptoCell:not(.given) { border-color: var(--error); }
 .cipherRow.wrong .cryptoCell span { text-decoration: underline wavy var(--error); text-underline-offset: 3px; }
+
+/* Pausa e placar (núcleo) */
+.status { flex-wrap: wrap; gap: 10px 16px; }
+.gameBody { position: relative; }
+.pauseCover {
+  position: absolute; inset: 0 -4px; z-index: 30; /* folga lateral: o tabuleiro (94vw) passa 1–2px do corpo */ display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  color: var(--fg); background: var(--surface);
+}
+.pauseCover[hidden] { display: none; }
+.pauseCover strong { font: 800 24px Georgia, serif; }
+.scoreboard { width: var(--board); margin: 18px auto 0; }
+.scoreboard[hidden] { display: none; }
+.scoreboard h2 { margin: 0 0 6px; font-size: 16px; }
+.scoreboard table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.scoreboard th, .scoreboard td { padding: 7px 6px; text-align: left; border-bottom: 1px solid var(--variant); }
+.scoreboard .sortBtn { padding: 0; font: inherit; font-weight: 700; color: var(--fg); background: none; border: 0; cursor: pointer; }
+.numRow button.done, .popup button.done { visibility: hidden; }
