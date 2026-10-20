@@ -1,6 +1,5 @@
-import { readJson, removeKey, writeJson } from '../../core/storage';
-import type { GameModule } from '../../core/types';
-import { button, dialog, helpController, renderMenu } from '../../core/ui';
+import { createGame, type GameHost } from '../../core/gameShell';
+import { button, el } from '../../core/dom';
 import { letterKeyboard } from '../words/keyboard';
 import { WORD_LEVELS, WORD_LEVEL_IDS, type WordLevelId } from '../words/shared';
 import {
@@ -8,12 +7,12 @@ import {
   type HangmanState,
 } from './domain';
 
-const GAME_KEY = 'jj.hangman.game.v1';
-
-function loadSaved(): HangmanState | null {
-  const s = parseSaved(readJson(GAME_KEY));
-  return s && !isOver(s) ? s : null;
-}
+const HELP = `<p>Descubra a palavra escolhendo letras. A dica mostra a categoria e uma pista.</p>
+     <ul>
+       <li>Letra certa aparece em todos os lugares onde está na palavra.</li>
+       <li>Você perde com <strong>${MAX_ERRORS} erros</strong>.</li>
+       <li>O botão <em>Dica</em> revela uma letra sem contar erro (quantidade limitada por nível).</li>
+     </ul>`;
 
 /** Desenho da forca: cada erro acrescenta uma parte (base, poste, travessa, corda, cabeça, corpo, braços/pernas). */
 function gallows(errors: number): string {
@@ -32,114 +31,64 @@ function gallows(errors: number): string {
     fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round">${visible}</svg>`;
 }
 
-function mount(root: HTMLElement): () => void {
-  let game: HangmanState | null = null;
-  const help = helpController(
-    root, 'hangman', 'Como jogar',
-    `<p>Descubra a palavra escolhendo letras. A dica mostra a categoria e uma pista.</p>
-     <ul>
-       <li>Letra certa aparece em todos os lugares onde está na palavra.</li>
-       <li>Você perde com <strong>${MAX_ERRORS} erros</strong>.</li>
-       <li>O botão <em>Dica</em> revela uma letra sem contar erro (quantidade limitada por nível).</li>
-     </ul>`,
-  );
-
-  function showMenu(): void {
-    const saved = loadSaved();
-    renderMenu(root, {
-      saved: saved && {
-        text: `Continuar partida — ${WORD_LEVELS[saved.level].label} · ${errorsOf(saved)}/${MAX_ERRORS} erros`,
-        onContinue: () => show(saved),
-      },
-      levels: WORD_LEVEL_IDS.map((id) => ({ id, label: WORD_LEVELS[id].label, detail: `${WORD_LEVELS[id].min} a ${WORD_LEVELS[id].max} letras` })),
-      onStart: (id) => { removeKey(GAME_KEY); show(startHangman(id as WordLevelId)); },
-      onHelp: help.open,
-    });
-    help.openFirstTime();
-  }
-
+function mountView(body: HTMLElement, host: GameHost<HangmanState>) {
+  const edit = (change: (g: HangmanState) => HangmanState) => host.update(change(host.state()));
   const kb = letterKeyboard({ onLetter: (l) => edit((g) => guess(g, l)) });
-
-  function show(s: HangmanState): void {
-    game = s;
-    root.innerHTML = `
-      <section class="hangman">
-        <div class="status"><button id="menuBtn" class="btn" type="button">Menu</button>
-          <span>${WORD_LEVELS[s.level].label}</span><span id="errors"></span></div>
-        <div id="art"></div>
-        <p class="clue"><strong>${s.word.category}</strong> — ${s.word.hint}</p>
-        <div id="word" class="hangWord" aria-live="polite"></div>
-        <p id="wrong" class="hangWrong"></p>
-        <div class="controls"></div>
-      </section>`;
-    root.querySelector('#menuBtn')!.addEventListener('click', showMenu);
-    const hintBtn = button('Dica', 'btn', () => edit(hint));
-    hintBtn.id = 'hintBtn';
-    root.querySelector('.controls')!.append(hintBtn, button('Como jogar', 'btn', help.open));
-    root.querySelector('.hangman')!.appendChild(kb.root);
-    render();
-  }
-
-  function edit(change: (g: HangmanState) => HangmanState): void {
-    if (!game) return;
-    const next = change(game);
-    if (next === game) return;
-    game = next;
-    if (isOver(next)) removeKey(GAME_KEY);
-    else writeJson(GAME_KEY, { level: next.level, word: next.word.text, guessed: next.guessed, hintsLeft: next.hintsLeft });
-    render();
-    if (isOver(next)) {
-      const won = isWon(next);
-      dialog(root, {
-        title: won ? 'Você acertou!' : 'Fim de jogo',
-        html: `<p>${won ? 'A palavra é' : 'A palavra era'} <strong>${next.word.text}</strong>.</p>`,
-        buttons: [
-          { label: 'Jogar outra', primary: true, action: () => show(startHangman(next.level)) },
-          { label: 'Menu', action: showMenu },
-        ],
-      });
-    }
-  }
-
-  function render(): void {
-    if (!game) return;
-    const g = game;
-    root.querySelector('#art')!.innerHTML = gallows(errorsOf(g));
-    const word = root.querySelector('#word')!;
-    word.replaceChildren(...shown(g).map((l) => {
-      const s = document.createElement('span');
-      s.className = 'hl' + (isLost(g) && !g.guessed.includes(l) ? ' missed' : '');
-      s.textContent = l || '_';
-      return s;
-    }));
-    root.querySelector('#errors')!.textContent = `${errorsOf(g)}/${MAX_ERRORS}`;
-    root.querySelector('#wrong')!.textContent = wrongLetters(g).length ? `Erradas: ${wrongLetters(g).join(' ')}` : '';
-    const marks = new Map<string, string>();
-    for (const l of g.guessed) marks.set(l, g.word.text.includes(l) ? 'hit' : 'miss');
-    kb.setMarks(marks);
-    kb.setUsed(new Set(g.guessed));
-    const hb = root.querySelector<HTMLButtonElement>('#hintBtn')!;
-    hb.textContent = `Dica (${g.hintsLeft})`;
-    hb.disabled = g.hintsLeft === 0 || isOver(g);
-  }
+  const art = el('div');
+  const clue = el('p', 'clue');
+  const word = el('div', 'hangWord');
+  word.setAttribute('aria-live', 'polite');
+  const wrong = el('p', 'hangWrong');
+  const hintBtn = button('Dica', 'btn', () => edit(hint));
+  const controls = el('div', 'controls');
+  controls.append(hintBtn);
+  body.append(art, clue, word, wrong, controls, kb.root);
 
   const onKey = (e: KeyboardEvent): void => {
-    if (!game || e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
     if (/^[a-zA-Z]$/.test(e.key)) edit((g) => guess(g, e.key.toUpperCase()));
   };
   document.addEventListener('keydown', onKey);
 
-  showMenu();
-  return () => {
-    document.removeEventListener('keydown', onKey);
-    root.replaceChildren();
+  return {
+    render(g: HangmanState): void {
+      art.innerHTML = gallows(errorsOf(g));
+      clue.innerHTML = `<strong>${g.word.category}</strong> — ${g.word.hint}`;
+      word.replaceChildren(...shown(g).map((l) => {
+        const s = el('span', 'hl' + (isLost(g) && !g.guessed.includes(l) ? ' missed' : ''));
+        s.textContent = l || '_';
+        return s;
+      }));
+      wrong.textContent = wrongLetters(g).length ? `Erradas: ${wrongLetters(g).join(' ')}` : '';
+      const marks = new Map<string, string>();
+      for (const l of g.guessed) marks.set(l, g.word.text.includes(l) ? 'hit' : 'miss');
+      kb.setMarks(marks);
+      kb.setUsed(new Set(g.guessed));
+      hintBtn.textContent = `Dica (${g.hintsLeft})`;
+      hintBtn.disabled = g.hintsLeft === 0 || isOver(g);
+    },
+    destroy: () => document.removeEventListener('keydown', onKey),
   };
 }
 
-export const hangman: GameModule = {
-  id: 'hangman',
-  title: 'Forca',
-  description: 'Adivinhe a palavra antes de acabarem as tentativas.',
-  icon: '🔤',
-  mount,
-};
+export const hangman = createGame<HangmanState, WordLevelId>({
+  meta: { id: 'hangman', title: 'Forca', description: 'Adivinhe a palavra antes de acabarem as tentativas.', icon: '🔤' },
+  help: HELP,
+  levels: WORD_LEVEL_IDS.map((id) => ({ id, label: WORD_LEVELS[id].label, detail: `${WORD_LEVELS[id].min} a ${WORD_LEVELS[id].max} letras` })),
+  newGame: (level) => startHangman(level),
+  levelOf: (s) => s.level,
+  save: {
+    key: 'jj.hangman.game.v1',
+    parse: parseSaved,
+    serialize: (s) => ({ level: s.level, word: s.word.text, guessed: s.guessed, hintsLeft: s.hintsLeft }),
+    isOver,
+  },
+  resumeLabel: (s) => `${WORD_LEVELS[s.level].label} · ${errorsOf(s)}/${MAX_ERRORS} erros`,
+  className: 'hangman',
+  statusText: (s) => `${WORD_LEVELS[s.level].label} · ${errorsOf(s)}/${MAX_ERRORS}`,
+  mountView,
+  finish: (s) => ({
+    title: isWon(s) ? 'Você acertou!' : 'Fim de jogo',
+    html: `<p>${isWon(s) ? 'A palavra é' : 'A palavra era'} <strong>${s.word.text}</strong>.</p>`,
+  }),
+});
