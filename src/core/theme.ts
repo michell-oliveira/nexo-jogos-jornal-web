@@ -162,6 +162,7 @@ export function applyTheme(id: ThemeId): void {
   s.setProperty('--error', pal.error);
   s.setProperty('--outline', pal.outline);
   s.setProperty('color-scheme', pal.dark ? 'dark' : 'light');
+  document.documentElement.dataset.theme = id; // permite ajustes finos por tema no CSS (ex.: destaques do Sudoku)
   // Sem extras (temas antigos), as variáveis somem e o CSS cai nos valores padrão.
   const extras: [string, string | undefined][] = [
     ['--empty', x?.empty], ['--given', x?.given], ['--peer', x?.peer], ['--peer-filled', x?.peerFilled],
