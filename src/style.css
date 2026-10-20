@@ -11,12 +11,23 @@
   --outline: #9e9e9e;
   --board: min(94vw, 540px);
   --cell: calc(var(--board) / 9);
-  /* Destaques do Sudoku, derivados de cada tema (valem para todos): linha/coluna em âmbar sobre o fundo,
-     bloco = faixa do tema (--peer nos temas Jornal, --variant nos demais). */
-  --hl-lines: light-dark(color-mix(in srgb, #f2a900 48%, var(--bg)), color-mix(in srgb, #f2a900 18%, var(--bg)));
-  --hl-box: var(--peer, var(--variant));
+  /* Destaques do Sudoku, derivados de cada tema (valem para todos): linha/coluna em âmbar sobre a célula vazia
+     (no escuro o âmbar é escurecido para não tirar contraste do número), bloco = faixa do tema (--peer nos temas
+     Jornal, --variant nos demais) deslocada para longe do âmbar. Medido em OKLab nos 30 temas. */
+  --hl-lines: light-dark(
+    color-mix(in srgb, #f2a900 45%, var(--empty, var(--bg))),
+    color-mix(in srgb, #f2a900 30%, color-mix(in srgb, black 75%, var(--empty, var(--bg)))));
+  /* --hl-box-p só é válida nos temas com --peer (Jornal e Teoria das cores); nos demais cai no fallback. */
+  --hl-box-p: light-dark(color-mix(in srgb, var(--fg) 20%, var(--peer)), color-mix(in srgb, var(--fg) 4%, var(--peer)));
+  --hl-box: var(--hl-box-p, light-dark(
+    color-mix(in srgb, var(--fg) 6%, color-mix(in srgb, var(--empty, var(--bg)) 50%, var(--variant))),
+    color-mix(in srgb, var(--empty, var(--bg)) 10%, var(--variant))));
   --hl-match: var(--same, color-mix(in srgb, var(--primary) 32%, var(--bg)));
 }
+/* Ajustes finos (medidos em OKLab) onde a fórmula geral não alcança linha/coluna x bloco >= 9 sem tirar contraste do número. */
+:root[data-theme="monokai"] { --hl-lines: color-mix(in srgb, #f2a900 38%, color-mix(in srgb, black 25%, var(--empty, var(--bg)))); }
+:root[data-theme="gruvbox"] { --hl-box: color-mix(in srgb, var(--fg) 5%, var(--variant)); }
+:root[data-theme="jornal_noturno"] { --hl-lines: color-mix(in srgb, #f2a900 34%, color-mix(in srgb, black 75%, var(--empty, var(--bg)))); }
 
 * { box-sizing: border-box; }
 
