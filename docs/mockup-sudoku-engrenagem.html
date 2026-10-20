@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup Sudoku — engrenagem e destaques</title>
+<style>
+:root{--bg:#fff;--ink:#212529;--muted:#6c757d;--btn:#e9ecef;--line:#cfd4da;--primary:#0d63d8;
+--cell:#eaedf1;--match:#b3d0f2;--sel:#0d63d8;
+--hl-lines:#fbe3b0;   /* NOVO: linha/coluna (âmbar suave) */
+--hl-box:#d6dde8;     /* bloco (cinza-azulado, hoje 'related') */
+--mark:#0d63d8}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:14px 16px}
+header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:10px}
+h1{font:700 32px Georgia,serif;margin:0}h1 small{font:600 14px Georgia,serif;color:var(--muted);margin-left:6px}
+.nav button,.bar button,.modes button{background:var(--btn);border:0;border-radius:6px;padding:10px 14px;font-size:14px;cursor:pointer}
+.nav{display:flex;gap:8px}
+.bar{display:flex;gap:14px;align-items:center;justify-content:center;margin:14px 0 8px;position:relative}
+.bar .gear{width:40px;height:40px;padding:0;font-size:20px;line-height:1}
+.pop{position:absolute;top:48px;left:50%;margin-left:30px;width:280px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0002;padding:12px 14px;z-index:5;display:none;text-align:left}
+.pop.open{display:block}
+.pop h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px}
+.row i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:8px;vertical-align:-2px;border:1px solid #0002}
+.sw{position:relative;width:42px;height:24px;flex:none}
+.sw input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;background:#adb5bd;border-radius:12px;transition:.15s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
+.sw input:checked+span{background:var(--primary)}.sw input:checked+span::after{left:21px}
+.flag{text-align:center;font-size:14px;margin:8px 0}
+.board{display:grid;grid-template-columns:repeat(9,60px);width:540px;margin:10px auto;border:2px solid var(--ink)}
+.c{height:60px;display:flex;align-items:center;justify-content:center;font:700 30px system-ui;background:var(--cell);border:1px solid var(--line)}
+.c.bR{border-right:2px solid var(--ink)}.c.bB{border-bottom:2px solid var(--ink)}
+.c.box{background:var(--hl-box)}.c.lines{background:var(--hl-lines)}.c.match{background:var(--match)}.c.sel{background:var(--sel);color:#fff}
+.modes{display:flex;justify-content:center;gap:0;margin:8px 0}.modes button{background:#fff;border:1px solid var(--line)}.modes .on{background:var(--ink);color:#fff}
+.note{margin:18px auto;max-width:540px;font-size:13px;color:var(--muted);border-left:3px solid var(--primary);padding-left:10px}
+@media(max-width:600px){.board{grid-template-columns:repeat(9,1fr);width:100%}.c{height:auto;aspect-ratio:1;font-size:22px}.pop{margin-left:-140px}}
+</style></head><body><div class="wrap">
+<header><h1>Sudoku <small>20 de outubro de 2026</small></h1>
+<div class="nav"><button>← Jogos</button><button>Usuários</button><button>Sair</button><button>Tema</button></div></header>
+
+<div class="bar"><button>Menu</button><span>Fácil · 02:49</span>
+ <button class="gear" id="gearBtn" aria-label="Opções de destaque" title="Opções">⚙</button>
+ <div class="pop" id="pop" role="dialog" aria-label="Destaque">
+  <h3>Destaque</h3>
+  <label class="row"><span><i style="background:var(--match)"></i>Números iguais</span><span class="sw"><input type="checkbox" id="optMatch" checked><span></span></span></label>
+  <label class="row"><span><i style="background:var(--hl-lines)"></i>Linha e coluna</span><span class="sw"><input type="checkbox" id="optLines" checked><span></span></span></label>
+  <label class="row"><span><i style="background:var(--hl-box)"></i>Bloco atual</span><span class="sw"><input type="checkbox" id="optBox" checked><span></span></span></label>
+ </div></div>
+
+<div class="flag"><input type="checkbox" checked> Abrir teclado ao clicar na célula</div>
+<div class="board" id="board"></div>
+<div class="modes"><button class="on">Normal</button><button>Anotação</button><button disabled style="margin-left:10px;border-radius:6px">Desfazer</button></div>
+<div class="flag"><input type="checkbox"> Anotações automáticas</div>
+<p class="note">Mockup interativo: CLIQUE EM QUALQUER CÉLULA e use os interruptores da engrenagem. Números iguais: mesmo dígito da célula. Linha e coluna: a linha e a coluna da célula (âmbar). Bloco atual: o bloco 3x3 da célula (cinza-azulado); a parte do bloco que já está na linha/coluna fica âmbar. Mudam: botão ⚙ ao lado do tempo e a cor das linhas/colunas (âmbar), distinta da do bloco (cinza-azulado). O resto da tela é o atual.</p>
+</div>
+<script>
+const rows=["538706900","002300708","400815623","020080005","306070400","040500007","210007009","004091506","000430172"];
+const vals=rows.join("").split("").map(Number); let SEL=1*9+6;const  box=i=>Math.floor(i/27)*3+Math.floor(i%9/3);
+const board=document.getElementById("board"),cells=[];
+vals.forEach((v,i)=>{const b=document.createElement("div");b.className="c"+(i%9%3==2&&i%9<8?" bR":"")+(Math.floor(i/9)%3==2&&Math.floor(i/9)<8?" bB":"");b.textContent=v||"";b.onclick=()=>{SEL=i;paint()};board.appendChild(b);cells.push(b)});
+const o={match:optMatch,lines:optLines,box:optBox};
+function paint(){const d=vals[SEL],r=Math.floor(SEL/9),c=SEL%9,bx=box(SEL);
+ cells.forEach((el,i)=>{el.classList.remove("match","lines","box","sel");
+  if(i===SEL){el.classList.add("sel");return}
+  if(d&&vals[i]===d&&o.match.checked){el.classList.add("match");return}
+  if(o.lines.checked&&(Math.floor(i/9)===r||i%9===c))el.classList.add("lines");
+  else if(o.box.checked&&box(i)===bx)el.classList.add("box");});}
+Object.values(o).forEach(x=>x.addEventListener("change",paint));paint();
+gearBtn.onclick=e=>{e.stopPropagation();pop.classList.toggle("open")};
+document.addEventListener("click",e=>{if(!pop.contains(e.target))pop.classList.remove("open")});
+</script></body></html>

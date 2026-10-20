@@ -7,9 +7,13 @@ export interface Prefs {
   /** Abre o teclado flutuante ao clicar na célula (senão, mostra a linha de números abaixo do quadro). */
   popup: boolean;
   autoNotes: boolean;
+  /** Sudoku: destaques a partir da célula selecionada (números iguais, linha e coluna, bloco). */
+  hlMatch: boolean;
+  hlLines: boolean;
+  hlBox: boolean;
 }
 
-const DEFAULT_PREFS: Prefs = { theme: 'system', popup: true, autoNotes: false };
+const DEFAULT_PREFS: Prefs = { theme: 'system', popup: true, autoNotes: false, hlMatch: true, hlLines: true, hlBox: true };
 
 // Cada usuário tem a própria área: o navegador é compartilhado, o progresso não pode ser.
 let scope = '';
@@ -67,6 +71,9 @@ export function loadPrefs(): Prefs {
     theme: isThemeId(raw?.theme) ? raw.theme : DEFAULT_PREFS.theme,
     popup: typeof raw?.popup === 'boolean' ? raw.popup : DEFAULT_PREFS.popup,
     autoNotes: typeof raw?.autoNotes === 'boolean' ? raw.autoNotes : DEFAULT_PREFS.autoNotes,
+    hlMatch: typeof raw?.hlMatch === 'boolean' ? raw.hlMatch : DEFAULT_PREFS.hlMatch,
+    hlLines: typeof raw?.hlLines === 'boolean' ? raw.hlLines : DEFAULT_PREFS.hlLines,
+    hlBox: typeof raw?.hlBox === 'boolean' ? raw.hlBox : DEFAULT_PREFS.hlBox,
   };
 }
 

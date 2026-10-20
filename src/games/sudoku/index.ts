@@ -2,7 +2,7 @@ import { fmtTime } from '../../core/dom';
 import { createGame, type GameHost } from '../../core/gameShell';
 import { Game } from './domain/game';
 import { DIFFICULTIES, type DifficultyId } from './domain/generator';
-import { computeHighlights, findConflicts, peersOf, type CellHighlight } from './domain/highlight';
+import { computeHighlights, findConflicts } from './domain/highlight';
 import type { GameContext } from '../../core/types';
 
 const HELP = `<p>Preencha a grade 9×9 de modo que cada <strong>linha</strong>, cada <strong>coluna</strong> e cada quadrado 3×3 tenham os números de 1 a 9, sem repetir.</p>
@@ -75,12 +75,7 @@ function mountView(body: HTMLElement, host: GameHost<Game>, ctx: GameContext) {
 
   function render(): void {
     const g = game;
-    const digit = selected >= 0 ? g.values[selected]! : 0;
-    const hl: CellHighlight[] = digit
-      ? computeHighlights(g.values, digit)
-      : selected >= 0
-        ? peersOf(selected)
-        : new Array<CellHighlight>(81).fill('none');
+    const hl = computeHighlights(g.values, selected, { match: prefs.hlMatch, lines: prefs.hlLines, box: prefs.hlBox });
     const conflicts = findConflicts(g.values);
 
     cells.forEach((el, i) => {
@@ -88,8 +83,9 @@ function mountView(body: HTMLElement, host: GameHost<Game>, ctx: GameContext) {
       const mask = v === 0 ? (autoNotesBox.checked ? g.autoNotes(i) : g.notes[i]!) : 0;
       const html = v ? String(v) : mask ? notesHtml(mask) : '';
       if (el.innerHTML !== html) el.innerHTML = html;
-      el.classList.toggle('related', hl[i] === 'related');
       el.classList.toggle('match', hl[i] === 'match');
+      el.classList.toggle('lines', hl[i] === 'lines');
+      el.classList.toggle('box', hl[i] === 'box');
       el.classList.toggle('user', v !== 0 && !g.isGiven(i));
       el.classList.toggle('given', v !== 0 && g.isGiven(i));
       el.classList.toggle('filled', v !== 0);
@@ -178,6 +174,55 @@ function mountView(body: HTMLElement, host: GameHost<Game>, ctx: GameContext) {
     if (!prefs.popup) closePopup();
   }
 
+  // ---------- Engrenagem de destaques (ao lado do status, na barra do shell) ----------
+
+  const bar = host.status.parentElement as HTMLElement;
+  const gear = document.createElement('button');
+  gear.type = 'button';
+  gear.className = 'gearBtn';
+  gear.textContent = '⚙';
+  gear.title = 'Opções de destaque';
+  gear.setAttribute('aria-label', 'Opções de destaque');
+  gear.setAttribute('aria-haspopup', 'dialog');
+  gear.setAttribute('aria-expanded', 'false');
+  const hlPop = document.createElement('div');
+  hlPop.className = 'hlPop';
+  hlPop.setAttribute('role', 'dialog');
+  hlPop.setAttribute('aria-label', 'Destaque');
+  hlPop.hidden = true;
+  const HL_ROWS: { key: 'hlMatch' | 'hlLines' | 'hlBox'; label: string; color: string }[] = [
+    { key: 'hlMatch', label: 'Números iguais', color: 'var(--hl-match)' },
+    { key: 'hlLines', label: 'Linha e coluna', color: 'var(--hl-lines)' },
+    { key: 'hlBox', label: 'Bloco atual', color: 'var(--hl-box)' },
+  ];
+  hlPop.innerHTML =
+    '<h3>Destaque</h3>' +
+    HL_ROWS.map(
+      (r) =>
+        `<label class="hlRow"><span><i style="background:${r.color}"></i>${r.label}</span>` +
+        `<span class="sw"><input type="checkbox" data-hl="${r.key}" /><span></span></span></label>`,
+    ).join('');
+  for (const r of HL_ROWS) {
+    const input = hlPop.querySelector<HTMLInputElement>(`[data-hl="${r.key}"]`)!;
+    input.checked = prefs[r.key];
+    input.addEventListener('change', () => {
+      prefs[r.key] = input.checked;
+      ctx.savePrefs();
+      render();
+    });
+  }
+  bar.append(gear, hlPop);
+  function setHlPop(open: boolean): void {
+    hlPop.hidden = !open;
+    gear.setAttribute('aria-expanded', String(open));
+    if (open) hlPop.querySelector<HTMLInputElement>('input')?.focus();
+  }
+  gear.addEventListener('click', () => setHlPop(hlPop.hidden === true));
+  offs.push(() => {
+    gear.remove();
+    hlPop.remove();
+  });
+
   // ---------- Fluxo da partida ----------
 
   function onCellClick(i: number): void {
@@ -231,10 +276,15 @@ function mountView(body: HTMLElement, host: GameHost<Game>, ctx: GameContext) {
   on('pointerdown', (e) => {
     const t = e.target as Node;
     if (popupCell >= 0 && !popup.contains(t)) closePopup();
+    if (!hlPop.hidden && !hlPop.contains(t) && !gear.contains(t)) setHlPop(false);
   });
 
   on('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (!hlPop.hidden) {
+        setHlPop(false);
+        gear.focus();
+      }
       closePopup();
       return;
     }

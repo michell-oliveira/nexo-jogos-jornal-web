@@ -68,7 +68,8 @@ o catálogo monta. O shell cuida de:
 
 ## Progresso salvo
 Tudo em `localStorage`, tolerante a falha. Partida: `jj.<jogo>.game.v1` (ex.: `jj.sudoku.game.v1`, `jj.2048.game.v1`);
-preferências/tema: `jj.prefs.v1`. Com usuário logado a chave real vira `jj.u.<usuario>.<resto>`, então cada conta tem
+preferências/tema: `jj.prefs.v1` (inclui `popup`, `autoNotes` e, no Sudoku, `hlMatch`/`hlLines`/`hlBox` — os
+interruptores da engrenagem ⚙ de destaques; ausentes em prefs antigas = ligados). Com usuário logado a chave real vira `jj.u.<usuario>.<resto>`, então cada conta tem
 o seu progresso. Mudar uma chave ou formato apaga o progresso dos jogadores: mantenha ambos estáveis.
 
 ## Testes
