@@ -1,97 +1,80 @@
-import { readJson, removeKey, writeJson } from '../../core/storage';
-import type { GameModule } from '../../core/types';
-import { button, dialog, el, helpController } from '../../core/ui';
+import { button, el } from '../../core/dom';
+import { createGame, type GameHost } from '../../core/gameShell';
 import {
   MAX_ADDS, addNumbers, findPair, isStuck, isWon, parseSaved, remaining, select, startMatch, type MatchBoard,
 } from './domain';
 
-const GAME_KEY = 'jj.numbermatch.game.v1';
-
-function mount(root: HTMLElement): () => void {
-  const loaded = parseSaved(readJson(GAME_KEY));
-  let board: MatchBoard = loaded && !isWon(loaded) && !isStuck(loaded) ? loaded : startMatch();
-  let hint: [number, number] | null = null;
-  const help = helpController(
-    root, 'numbermatch', 'Como jogar',
-    `<p>Toque em duas casas para remover o par: números <strong>iguais</strong> ou que <strong>somam 10</strong>.</p>
+const HELP = `<p>Toque em duas casas para remover o par: números <strong>iguais</strong> ou que <strong>somam 10</strong>.</p>
      <p>As casas precisam se enxergar: na mesma linha, coluna ou diagonal, ou em sequência de leitura (do fim de uma linha ao começo da seguinte), sem números entre elas.</p>
-     <p>Quando não houver mais jogadas, use <strong>Adicionar</strong> para copiar os números restantes no fim (${MAX_ADDS} vezes por partida). Limpe o tabuleiro para vencer.</p>`,
-  );
+     <p>Quando não houver mais jogadas, use <strong>Adicionar</strong> para copiar os números restantes no fim (${MAX_ADDS} vezes por partida). Limpe o tabuleiro para vencer.</p>`;
 
-  root.innerHTML = `
-    <section class="match">
-      <div class="status"><span id="left"></span><span id="adds"></span></div>
-      <div id="board" class="matchBoard" role="grid" aria-label="Number Match"></div>
-      <div class="controls"></div>
-    </section>`;
-  const boardEl = root.querySelector<HTMLElement>('#board')!;
+function mountView(body: HTMLElement, host: GameHost<MatchBoard>) {
+  let hint: [number, number] | null = null;
+  const boardEl = el('div', 'matchBoard');
+  boardEl.setAttribute('role', 'grid');
+  boardEl.setAttribute('aria-label', 'Number Match');
   boardEl.addEventListener('click', (e) => {
     const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-i]');
-    if (cell) update(select(board, Number(cell.dataset.i)));
+    if (cell) host.update(select(host.state(), Number(cell.dataset.i)));
   });
   const addBtn = button('Adicionar', 'btn', () => {
-    const next = addNumbers(board);
-    if (next) update(next);
+    const next = addNumbers(host.state());
+    if (next) host.update(next);
   });
-  root.querySelector('.controls')!.append(
+  const controls = el('div', 'controls');
+  controls.append(
     addBtn,
     button('Dica', 'btn', () => {
-      hint = findPair(board);
-      render();
+      hint = findPair(host.state());
+      draw(host.state());
     }),
-    button('Novo jogo', 'btn', () => update(startMatch())),
-    button('Como jogar', 'btn', help.open),
+    button('Novo jogo', 'btn', host.newGame),
   );
+  body.append(boardEl, controls);
 
-  function update(next: MatchBoard): void {
-    board = next;
-    hint = null;
-    if (isWon(next) || isStuck(next)) removeKey(GAME_KEY);
-    else writeJson(GAME_KEY, { cells: next.cells, addsLeft: next.addsLeft });
-    render();
-    if (isWon(next)) {
-      dialog(root, {
-        title: 'Tabuleiro limpo!',
-        html: '<p>Você eliminou todos os números.</p>',
-        buttons: [{ label: 'Jogar outro', primary: true, action: () => update(startMatch()) }],
-      });
-    } else if (isStuck(next)) {
-      dialog(root, {
-        title: 'Sem saída',
-        html: `<p>Não há mais pares nem rodadas extras. Sobraram ${remaining(next)} números.</p>`,
-        buttons: [{ label: 'Novo jogo', primary: true, action: () => update(startMatch()) }],
-      });
-    }
-  }
-
-  function render(): void {
+  function draw(b: MatchBoard): void {
     const frag = document.createDocumentFragment();
-    board.cells.forEach((v, i) => {
-      const b = el('button', 'mt');
-      b.type = 'button';
-      b.dataset.i = String(i);
-      b.textContent = v ? String(v) : '';
-      b.disabled = v === 0;
-      if (i === board.selected) b.classList.add('selected');
-      if (hint && (hint[0] === i || hint[1] === i)) b.classList.add('hint');
-      b.setAttribute('aria-label', v ? `Número ${v}` : 'vazia');
-      frag.appendChild(b);
+    b.cells.forEach((v, i) => {
+      const cell = el('button', 'mt');
+      cell.type = 'button';
+      cell.dataset.i = String(i);
+      cell.textContent = v ? String(v) : '';
+      cell.disabled = v === 0;
+      if (i === b.selected) cell.classList.add('selected');
+      if (hint && (hint[0] === i || hint[1] === i)) cell.classList.add('hint');
+      cell.setAttribute('aria-label', v ? `Número ${v}` : 'vazia');
+      frag.appendChild(cell);
     });
     boardEl.replaceChildren(frag);
-    root.querySelector('#left')!.textContent = `${remaining(board)} números`;
-    root.querySelector('#adds')!.textContent = `Adicionar: ${board.addsLeft}/${MAX_ADDS}`;
-    addBtn.disabled = board.addsLeft === 0 || remaining(board) === 0;
+    addBtn.disabled = b.addsLeft === 0 || remaining(b) === 0;
   }
 
-  render();
-  help.openFirstTime();
-  return () => root.replaceChildren();
+  return {
+    render(b: MatchBoard): void {
+      hint = null; // a dica vale só até a próxima jogada
+      draw(b);
+    },
+  };
 }
 
-export const numbermatch: GameModule = {
-  id: 'numbermatch',
-  title: 'Number Match',
-  description: 'Elimine pares de números iguais ou que somam 10.',
-  icon: '🔗',
-  mount,
-};
+export const numbermatch = createGame<MatchBoard, 'new'>({
+  meta: { id: 'numbermatch', title: 'Number Match', description: 'Elimine pares de números iguais ou que somam 10.', icon: '🔗' },
+  help: HELP,
+  levels: [{ id: 'new', label: 'Novo jogo' }],
+  newGame: () => startMatch(),
+  levelOf: () => 'new',
+  save: {
+    key: 'jj.numbermatch.game.v1',
+    parse: parseSaved,
+    serialize: (b) => ({ cells: b.cells, addsLeft: b.addsLeft }),
+    isOver: (b) => isWon(b) || isStuck(b),
+  },
+  resumeLabel: (b) => `${remaining(b)} números`,
+  className: 'match',
+  statusText: (b) => `${remaining(b)} números · Adicionar: ${b.addsLeft}/${MAX_ADDS}`,
+  mountView,
+  finish: (b) =>
+    isWon(b)
+      ? { title: 'Tabuleiro limpo!', html: '<p>Você eliminou todos os números.</p>' }
+      : { title: 'Sem saída', html: `<p>Não há mais pares nem rodadas extras. Sobraram ${remaining(b)} números.</p>` },
+});
