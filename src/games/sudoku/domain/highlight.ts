@@ -1,35 +1,41 @@
 import { boxOf } from './solver';
 
-export type CellHighlight = 'none' | 'related' | 'match';
+export type CellHighlight = 'none' | 'match' | 'lines' | 'box';
 
-/**
- * 'match': células com `digit`. 'related': demais células das linhas, colunas e blocos que contêm `digit`.
- * `digit` 0 não destaca nada.
- */
-export function computeHighlights(values: readonly number[], digit: number): CellHighlight[] {
-  if (digit === 0) return new Array<CellHighlight>(81).fill('none');
-  const rows = new Array<boolean>(9).fill(false);
-  const cols = new Array<boolean>(9).fill(false);
-  const boxes = new Array<boolean>(9).fill(false);
-  values.forEach((v, i) => {
-    if (v !== digit) return;
-    rows[Math.floor(i / 9)] = true;
-    cols[i % 9] = true;
-    boxes[boxOf(i)] = true;
-  });
-  return values.map((v, i) =>
-    v === digit ? 'match' : rows[Math.floor(i / 9)] || cols[i % 9] || boxes[boxOf(i)] ? 'related' : 'none',
-  );
+export interface HighlightOptions {
+  /** Células com o mesmo dígito da selecionada. */
+  match: boolean;
+  /** Linha e coluna da célula selecionada. */
+  lines: boolean;
+  /** Bloco 3×3 da célula selecionada. */
+  box: boolean;
 }
 
-/** Linha, coluna e bloco da célula `cell` (destaque quando a célula selecionada está vazia). */
-export function peersOf(cell: number): CellHighlight[] {
-  const r = Math.floor(cell / 9);
-  const c = cell % 9;
-  const b = boxOf(cell);
-  return Array.from({ length: 81 }, (_, i) =>
-    i !== cell && (Math.floor(i / 9) === r || i % 9 === c || boxOf(i) === b) ? 'related' : 'none',
-  );
+export const DEFAULT_HIGHLIGHT: HighlightOptions = { match: true, lines: true, box: true };
+
+/**
+ * Destaques a partir da célula selecionada (`selected` -1 = nenhuma). Prioridade por célula:
+ * match > lines > box; cada opção desligada remove só o seu destaque. A própria célula selecionada
+ * fica 'none' (quem desenha pinta a seleção por cima).
+ */
+export function computeHighlights(
+  values: readonly number[],
+  selected: number,
+  opts: HighlightOptions = DEFAULT_HIGHLIGHT,
+): CellHighlight[] {
+  const out = new Array<CellHighlight>(81).fill('none');
+  if (selected < 0 || selected > 80) return out;
+  const digit = values[selected] ?? 0;
+  const r = Math.floor(selected / 9);
+  const c = selected % 9;
+  const b = boxOf(selected);
+  for (let i = 0; i < 81; i++) {
+    if (i === selected) continue;
+    if (opts.match && digit !== 0 && values[i] === digit) out[i] = 'match';
+    else if (opts.lines && (Math.floor(i / 9) === r || i % 9 === c)) out[i] = 'lines';
+    else if (opts.box && boxOf(i) === b) out[i] = 'box';
+  }
+  return out;
 }
 
 /** Células com valor repetido na própria linha, coluna ou bloco. */

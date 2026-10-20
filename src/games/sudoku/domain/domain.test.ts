@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Game } from './game';
 import { DIFFICULTIES, generatePuzzle, type DifficultyId } from './generator';
-import { computeHighlights, findConflicts, peersOf } from './highlight';
+import { computeHighlights, findConflicts } from './highlight';
 import { Solver, candidateMask } from './solver';
 
 /** RNG determinístico para testes reproduzíveis. */
@@ -47,21 +47,58 @@ describe('destaque', () => {
   values[0] = 5; // linha 0, col 0, bloco 0
   values[40] = 5; // linha 4, col 4, bloco 4
 
-  it('marca o mesmo dígito e as linhas/colunas/blocos que o contêm', () => {
-    const h = computeHighlights(values, 5);
-    expect(h[0]).toBe('match');
+  const count = (h: string[], k: string): number => h.filter((x) => x === k).length;
+
+  it('célula com dígito: match nos iguais, lines em linha/coluna, box no resto do bloco', () => {
+    const h = computeHighlights(values, 0);
+    expect(h[0]).toBe('none'); // a própria selecionada
     expect(h[40]).toBe('match');
-    expect(h[8]).toBe('related'); // linha 0
-    expect(h[36]).toBe('related'); // linha 4
+    expect(h[8]).toBe('lines'); // linha 0
+    expect(h[36]).toBe('lines'); // coluna 0 e linha 4 ficam em lines
+    expect(h[10]).toBe('box'); // bloco 0, fora de linha/coluna
     expect(h[80]).toBe('none');
+    expect(count(h, 'lines')).toBe(16);
+    expect(count(h, 'box')).toBe(4);
   });
 
-  it('dígito 0 não destaca nada', () => {
-    expect(computeHighlights(values, 0).every((x) => x === 'none')).toBe(true);
+  it('célula vazia: sem match; lines e box continuam', () => {
+    const h = computeHighlights(values, 41);
+    expect(count(h, 'match')).toBe(0);
+    expect(count(h, 'lines')).toBe(16);
+    expect(count(h, 'box')).toBe(4);
   });
 
-  it('peersOf cobre 20 vizinhas', () => {
-    expect(peersOf(40).filter((x) => x === 'related').length).toBe(20);
+  it('sem seleção não destaca nada', () => {
+    expect(computeHighlights(values, -1).every((x) => x === 'none')).toBe(true);
+  });
+
+  it('cada interruptor desligado remove só o seu destaque', () => {
+    const all = { match: true, lines: true, box: true };
+    const noMatch = computeHighlights(values, 0, { ...all, match: false });
+    expect(count(noMatch, 'match')).toBe(0);
+    expect(noMatch[40]).toBe('none');
+    expect(count(noMatch, 'lines')).toBe(16);
+    const noLines = computeHighlights(values, 0, { ...all, lines: false });
+    expect(count(noLines, 'lines')).toBe(0);
+    expect(noLines[8]).toBe('none');
+    expect(noLines[1]).toBe('box'); // cruzamento cai na cor do bloco
+    expect(noLines[40]).toBe('match');
+    expect(count(noLines, 'box')).toBe(8);
+    const noBox = computeHighlights(values, 0, { ...all, box: false });
+    expect(count(noBox, 'box')).toBe(0);
+    expect(noBox[10]).toBe('none');
+    expect(count(noBox, 'lines')).toBe(16);
+    expect(computeHighlights(values, 0, { match: false, lines: false, box: false }).every((x) => x === 'none')).toBe(true);
+  });
+
+  it('prioridade: match vence lines e box; lines vence box', () => {
+    const v = new Array<number>(81).fill(0);
+    v[0] = 5;
+    v[1] = 5; // mesma linha e bloco da selecionada
+    const h = computeHighlights(v, 0);
+    expect(h[1]).toBe('match');
+    expect(h[2]).toBe('lines'); // bloco 0 e linha 0: lines vence
+    expect(h[10]).toBe('box');
   });
 
   it('detecta conflitos', () => {

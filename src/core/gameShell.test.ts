@@ -45,7 +45,7 @@ function makeDef(overrides: Partial<GameDefinition<Counter, Level>> = {}): GameD
 const mountGame = (def = makeDef()) => {
   const root = document.createElement('div');
   document.body.appendChild(root);
-  const dispose = createGame(def).mount(root, { prefs: { theme: "system", popup: true, autoNotes: false }, savePrefs: () => {} });
+  const dispose = createGame(def).mount(root, { prefs: { theme: "system", popup: true, autoNotes: false, hlMatch: true, hlLines: true, hlBox: true }, savePrefs: () => {} });
   return { root, dispose };
 };
 const byText = (root: HTMLElement, text: string): HTMLButtonElement =>

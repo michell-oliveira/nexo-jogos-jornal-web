@@ -11,6 +11,11 @@
   --outline: #9e9e9e;
   --board: min(94vw, 540px);
   --cell: calc(var(--board) / 9);
+  /* Destaques do Sudoku, derivados de cada tema (valem para todos): linha/coluna em âmbar sobre o fundo,
+     bloco = faixa do tema (--peer nos temas Jornal, --variant nos demais). */
+  --hl-lines: light-dark(color-mix(in srgb, #f2a900 48%, var(--bg)), color-mix(in srgb, #f2a900 18%, var(--bg)));
+  --hl-box: var(--peer, var(--variant));
+  --hl-match: var(--same, color-mix(in srgb, var(--primary) 32%, var(--bg)));
 }
 
 * { box-sizing: border-box; }
@@ -168,9 +173,10 @@ a.hubCard:hover { border-color: var(--primary); }
 .cell.bR { border-right: 2px solid var(--fg); }
 .cell.bB { border-bottom: 2px solid var(--fg); }
 .cell.given { background: var(--given, var(--empty, var(--bg))); }
-.cell.related { background: var(--peer, var(--variant)); }
-.cell.related.filled { background: var(--peer-filled, var(--peer, var(--variant))); }
-.cell.match { background: var(--same, color-mix(in srgb, var(--primary) 32%, var(--bg))); }
+.cell.box { background: var(--hl-box); }
+.cell.box.filled { background: var(--peer-filled, var(--hl-box)); }
+.cell.lines { background: var(--hl-lines); }
+.cell.match { background: var(--hl-match); }
 .cell.user { color: var(--user-fg, var(--primary)); font-weight: 500; }
 .cell.match:not(.user) { color: var(--same-fg, var(--fg)); }
 .cell.match.user { color: var(--same-fg, var(--user-fg, var(--primary))); }
@@ -256,7 +262,29 @@ a.hubCard:hover { border-color: var(--primary); }
 .btn.on { background: var(--primary); color: var(--on-primary); }
 .winBody p { margin: 0 0 16px; font-size: 16px; }
 .hint { text-align: center; font-size: 13px; opacity: 0.7; }
-.status { align-items: center; }
+.status { align-items: center; position: relative; }
+
+/* Engrenagem de destaques do Sudoku */
+.gearBtn {
+  width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 1;
+  color: var(--fg); background: var(--variant); border: 0; border-radius: 6px; cursor: pointer;
+}
+.hlPop {
+  position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); z-index: 20;
+  width: min(280px, calc(100vw - 24px)); padding: 12px 14px; text-align: left;
+  color: var(--fg); background: var(--bg); border: 1px solid var(--outline); border-radius: 10px;
+  box-shadow: 0 8px 24px #0003;
+}
+.hlPop h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7; }
+.hlRow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; font-size: 14px; cursor: pointer; }
+.hlRow i { display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; border-radius: 3px; border: 1px solid #0003; }
+.sw { position: relative; width: 42px; height: 24px; flex: none; }
+.sw input { position: absolute; inset: 0; z-index: 1; margin: 0; opacity: 0; cursor: pointer; }
+.sw span { position: absolute; inset: 0; background: var(--outline); border-radius: 12px; transition: 0.15s; }
+.sw span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: 0.15s; }
+.sw input:checked + span { background: var(--primary); }
+.sw input:checked + span::after { left: 21px; }
+.sw input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; }
 
 /* 2048 */
 .scores { display: flex; justify-content: center; gap: 12px; padding: 12px 0 8px; }
