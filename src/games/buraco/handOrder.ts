@@ -1,0 +1,53 @@
+import { isJoker, type Card } from './domain/cards';
+
+/** Ordem de organização da mão: agrupar por naipe ou por valor. */
+export type SortMode = 'suit' | 'rank';
+
+const SUIT_ORDER: Record<string, number> = { S: 0, H: 1, C: 2, D: 3 };
+const suitKey = (c: Card): number => (isJoker(c) ? 9 : SUIT_ORDER[c.suit!]!);
+const rankKey = (c: Card): number => (isJoker(c) ? 99 : c.rank);
+
+/** Ordena uma cópia da mão (coringas ao fim). Função pura: a interface só guarda a ordem de ids. */
+export function sortHand(cards: readonly Card[], mode: SortMode): Card[] {
+  const by = mode === 'suit'
+    ? (a: Card, b: Card): number => suitKey(a) - suitKey(b) || rankKey(a) - rankKey(b) || a.id - b.id
+    : (a: Card, b: Card): number => rankKey(a) - rankKey(b) || suitKey(a) - suitKey(b) || a.id - b.id;
+  return [...cards].sort(by);
+}
+
+export const nextSortMode = (m: SortMode): SortMode => (m === 'suit' ? 'rank' : 'suit');
+
+/** Move o id para a posição `to` (0..n-1), as demais abrem espaço. Id ausente: devolve a ordem igual. */
+export function moveId(order: readonly number[], id: number, to: number): number[] {
+  const from = order.indexOf(id);
+  if (from < 0) return [...order];
+  const next = order.filter((x) => x !== id);
+  next.splice(Math.max(0, Math.min(next.length, to)), 0, id);
+  return next;
+}
+
+/**
+ * Reconcilia a ordem do jogador com a mão real: some quem saiu; cartas novas entram no fim
+ * (na ordem de `hand`), sem desmanchar o que o jogador organizou.
+ */
+export function reconcileOrder(order: readonly number[], hand: readonly Card[]): number[] {
+  const ids = new Set(hand.map((c) => c.id));
+  const kept = order.filter((id) => ids.has(id));
+  const have = new Set(kept);
+  return [...kept, ...hand.filter((c) => !have.has(c.id)).map((c) => c.id)];
+}
+
+// ---- geometria do leque (pura, testável sem DOM)
+
+export const CARD_W = 44;
+
+/** Distância horizontal entre cartas vizinhas do leque, limitada pela largura disponível. */
+export const fanStep = (width: number, n: number): number =>
+  Math.max(8, Math.min(34, (width - CARD_W - 8) / Math.max(n - 1, 1)));
+
+/** Posição (0..n-1) que o ponteiro em `px` (relativo ao leque) indica ao arrastar. */
+export function dropIndex(px: number, width: number, n: number): number {
+  if (n <= 1) return 0;
+  const idx = Math.round((px - width / 2) / fanStep(width, n) + (n - 1) / 2);
+  return Math.max(0, Math.min(n - 1, idx));
+}

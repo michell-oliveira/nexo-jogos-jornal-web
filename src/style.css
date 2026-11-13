@@ -521,3 +521,53 @@ a.hubCard:hover { border-color: var(--primary); }
 .scoreboard th, .scoreboard td { padding: 7px 6px; text-align: left; border-bottom: 1px solid var(--variant); }
 .scoreboard .sortBtn { padding: 0; font: inherit; font-weight: 700; color: var(--fg); background: none; border: 0; cursor: pointer; }
 .numRow button.done, .popup button.done { visibility: hidden; }
+
+/* Buraco: tudo derivado dos tokens do tema (nada de cor fixa, exceto o verde do feltro e o âmbar do curinga, misturados ao tema) */
+.buracoGame { --felt: color-mix(in srgb, #2e7d32 14%, var(--bg)); --wild: color-mix(in srgb, var(--tertiary) 38%, var(--bg)); max-width: 760px; margin: 0 auto; }
+.buracoGame .gameBody { overflow-x: clip; }
+.bScore { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 8px 12px; font-size: 14px; background: var(--surface); border-radius: 8px; }
+.bScore b { font-size: 18px; }
+.bTable { margin: 10px 0; padding: 10px; background: var(--felt); border-radius: 10px; }
+.bZone { margin-bottom: 10px; }
+.bZone h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; opacity: 0.75; }
+.bOpp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; font-size: 13px; }
+.bMini { display: flex; }
+.bMini .bcard { width: 22px; height: 31px; margin-left: -14px; }
+.bMini .bcard:first-child { margin-left: 0; }
+.bMelds { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; min-height: 78px; }
+.bNone { font-size: 13px; opacity: 0.6; }
+.bMeld { position: relative; padding-top: 16px; border-radius: 6px; }
+.bMeld.target { cursor: pointer; outline: 3px dashed var(--error); outline-offset: 3px; }
+.bMeldCards { display: flex; }
+.bMeldCards .bcard { width: 40px; height: 58px; margin-left: -20px; font-size: 14px; align-items: flex-start; padding: 4px 0 0 4px; }
+.bMeldCards .bcard:first-child { margin-left: 0; }
+.bMeldCards .bcard:last-child { align-items: center; padding: 0; }
+.bBadge { position: absolute; top: 0; left: 0; padding: 1px 6px; font-size: 11px; font-weight: 700; color: #fff; border-radius: 8px; }
+.bBadge.limpa { background: #2e7d32; }
+.bBadge.suja { background: #ef6c00; }
+.bcard {
+  display: flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 62px;
+  font: 700 15px/1.1 system-ui, sans-serif; color: var(--fg); background: var(--bg); border: 1px solid var(--outline); border-radius: 6px; user-select: none;
+}
+.bcard.red { color: var(--error); }
+.bcard.wild { background: var(--wild); border-color: var(--tertiary); }
+.bcard.back { color: transparent; background: repeating-linear-gradient(45deg, var(--primary), var(--primary) 5px, color-mix(in srgb, var(--primary) 70%, #000) 5px, color-mix(in srgb, var(--primary) 70%, #000) 10px); }
+.bcard.empty { font-size: 12px; font-weight: 400; color: var(--outline); background: transparent; border: 2px dashed var(--outline); }
+.bCenter { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 18px; margin: 6px 0 12px; }
+.bPile { font-size: 12px; text-align: center; border-radius: 8px; }
+.bPile .bcard { margin: 0 auto 4px; }
+.bPile.act { cursor: pointer; outline: 3px dashed var(--error); outline-offset: 2px; }
+.bPile.dead .bcard { opacity: 0.85; }
+.bPile.dropHint { outline: 3px dashed var(--error); outline-offset: 3px; }
+.bStack { position: relative; height: 62px; margin: 0 auto 4px; }
+.bStack .bcard { position: absolute; top: 0; margin: 0; }
+.bMsg { min-height: 1.4em; margin: 6px 0; text-align: center; font-weight: 600; }
+.bHand { position: relative; height: 122px; margin: 10px 0 14px; touch-action: none; }
+.bHand .bcard { position: absolute; bottom: 0; left: 0; cursor: grab; transition: transform 0.15s; box-shadow: 0 1px 3px #0004; }
+.bHand .bcard.sel { outline: 2px solid var(--primary); box-shadow: 0 8px 14px #0005; }
+.bHand .bcard.drag { z-index: 99 !important; cursor: grabbing; transition: none; box-shadow: 0 6px 14px #0006; }
+.bActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+.bActions .btn.new { outline: 2px dashed var(--error); outline-offset: 2px; }
+.buracoTable { width: 100%; font-size: 14px; border-collapse: collapse; }
+.buracoTable th, .buracoTable td { padding: 5px 8px; text-align: right; border-bottom: 1px solid var(--variant); }
+.buracoTable th:first-child, .buracoTable td:first-child { text-align: left; }
