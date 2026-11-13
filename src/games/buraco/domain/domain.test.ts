@@ -6,6 +6,7 @@ import {
   discardCard,
   drawFromStock,
   matchWinner,
+  roundWinner,
   newGame,
   nextRound,
   playMeld,
@@ -254,6 +255,16 @@ describe('pontuação', () => {
     expect(matchWinner({ ...base, matchScore: [3100, 2000] })).toBe(0);
     expect(matchWinner({ ...base, matchScore: [3000, 3400] })).toBe(1);
     expect(matchWinner({ ...base, matchScore: [3000, 3000] })).toBeNull();
+  });
+
+  it('vencedor da rodada: maior pontuação da rodada; empate ou sem resultado → null', () => {
+    const base = newGame(seeded(3));
+    const sc = (total: number) => ({ canastas: 0, melded: 0, goOut: 0, handPenalty: 0, total });
+    const over = (a: number, b: number) => ({ ...base, phase: 'over' as const, result: { wentOut: null, scores: [sc(a), sc(b)] as [ReturnType<typeof sc>, ReturnType<typeof sc>] } });
+    expect(roundWinner(base)).toBeNull();
+    expect(roundWinner(over(1025, 535))).toBe(0);
+    expect(roundWinner(over(-40, 120))).toBe(1);
+    expect(roundWinner(over(300, 300))).toBeNull();
   });
 
   it('nextRound só com rodada encerrada, mantém placar e alterna quem começa', () => {

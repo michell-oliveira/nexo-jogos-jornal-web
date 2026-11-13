@@ -532,22 +532,22 @@ a.hubCard:hover { border-color: var(--primary); }
 .bZone h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; opacity: 0.75; }
 .bOpp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; font-size: 13px; }
 .bMini { display: flex; }
-.bMini .bcard { width: 22px; height: 31px; margin-left: -14px; }
+.bMini .bcard { width: calc(22px * var(--bz, 1)); height: calc(31px * var(--bz, 1)); margin-left: calc(-14px * var(--bz, 1)); }
 .bMini .bcard:first-child { margin-left: 0; }
 .bMelds { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; min-height: 78px; }
 .bNone { font-size: 13px; opacity: 0.6; }
 .bMeld { position: relative; padding-top: 16px; border-radius: 6px; }
 .bMeld.target { cursor: pointer; outline: 3px dashed var(--error); outline-offset: 3px; }
 .bMeldCards { display: flex; }
-.bMeldCards .bcard { width: 40px; height: 58px; margin-left: -20px; font-size: 14px; align-items: flex-start; padding: 4px 0 0 4px; }
+.bMeldCards .bcard { width: calc(40px * var(--bz, 1)); height: calc(58px * var(--bz, 1)); margin-left: calc(-20px * var(--bz, 1)); font-size: calc(14px * var(--bz, 1)); align-items: flex-start; padding: 4px 0 0 4px; }
 .bMeldCards .bcard:first-child { margin-left: 0; }
 .bMeldCards .bcard:last-child { align-items: center; padding: 0; }
 .bBadge { position: absolute; top: 0; left: 0; padding: 1px 6px; font-size: 11px; font-weight: 700; color: #fff; border-radius: 8px; }
 .bBadge.limpa { background: #2e7d32; }
 .bBadge.suja { background: #ef6c00; }
 .bcard {
-  display: flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 62px;
-  font: 700 15px/1.1 system-ui, sans-serif; color: var(--fg); background: var(--bg); border: 1px solid var(--outline); border-radius: 6px; user-select: none;
+  display: flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: calc(44px * var(--bz, 1)); height: calc(62px * var(--bz, 1));
+  font: 700 calc(15px * var(--bz, 1))/1.1 system-ui, sans-serif; color: var(--fg); background: var(--bg); border: 1px solid var(--outline); border-radius: 6px; user-select: none;
 }
 .bcard.red { color: var(--error); }
 .bcard.wild { background: var(--wild); border-color: var(--tertiary); }
@@ -558,12 +558,19 @@ a.hubCard:hover { border-color: var(--primary); }
 .bPile .bcard { margin: 0 auto 4px; }
 .bPile.act { cursor: pointer; outline: 3px dashed var(--error); outline-offset: 2px; }
 .bPile.dead .bcard { opacity: 0.85; }
+.bMeld.dropOk { outline: 3px solid var(--primary); outline-offset: 3px; background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.bMeld.dropNo { outline: 3px dotted var(--outline); outline-offset: 3px; }
+.bVerdict { margin: 0 0 6px; font-size: 18px; font-weight: 700; text-align: center; }
+.bZoom { position: fixed; z-index: 40; top: 50%; right: 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; transform: translateY(-50%); background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--outline); border-radius: 14px; }
+.bZoomVal { min-width: 36px; padding: 0; font: 600 11px/1.4 system-ui, sans-serif; color: var(--fg); background: none; border: 0; cursor: pointer; }
+.bZoomRange { width: 22px; height: 150px; margin: 0; writing-mode: vertical-lr; direction: rtl; accent-color: var(--primary); cursor: pointer; }
+@media (max-width: 860px) { .buracoGame .gameBody { padding-right: 34px; } }
 .bPile.dropHint { outline: 3px dashed var(--error); outline-offset: 3px; }
-.bStack { position: relative; height: 62px; margin: 0 auto 4px; }
+.bStack { position: relative; height: calc(62px * var(--bz, 1)); margin: 0 auto 4px; }
 .bStack .bcard { position: absolute; top: 0; margin: 0; }
 .bMsg { min-height: 1.4em; margin: 6px 0; text-align: center; font-weight: 600; }
-.bHand { position: relative; height: 122px; margin: 10px 0 14px; touch-action: none; }
-.bHand .bcard { position: absolute; bottom: 0; left: 0; cursor: grab; transition: transform 0.15s; box-shadow: 0 1px 3px #0004; }
+.bHand { position: relative; height: calc(122px * var(--bz, 1)); margin: 10px 0 14px; touch-action: none; }
+.bHand .bcard { position: absolute; bottom: 0; left: 0; justify-content: flex-start; align-items: flex-start; padding: 4px 0 0 4px; cursor: grab; transition: transform 0.15s; box-shadow: 0 1px 3px #0004; }
 .bHand .bcard.sel { outline: 2px solid var(--primary); box-shadow: 0 8px 14px #0005; }
 .bHand .bcard.drag { z-index: 99 !important; cursor: grabbing; transition: none; box-shadow: 0 6px 14px #0006; }
 .bFlyer { position: fixed; z-index: 300; margin: 0; pointer-events: none; will-change: transform; box-shadow: 0 6px 14px #0005; }

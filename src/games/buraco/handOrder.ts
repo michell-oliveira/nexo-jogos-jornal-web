@@ -41,13 +41,32 @@ export function reconcileOrder(order: readonly number[], hand: readonly Card[]):
 
 export const CARD_W = 44;
 
-/** Distância horizontal entre cartas vizinhas do leque, limitada pela largura disponível. */
-export const fanStep = (width: number, n: number): number =>
-  Math.max(8, Math.min(34, (width - CARD_W - 8) / Math.max(n - 1, 1)));
+/**
+ * Distância horizontal entre cartas vizinhas do leque, limitada pela largura disponível.
+ * No máximo metade da carta (leque bem fechado, só o canto do índice aparece), como numa mão real.
+ */
+export const fanStep = (width: number, n: number, cardW = CARD_W): number =>
+  Math.max(8, Math.min(cardW / 2, (width - cardW - 8) / Math.max(n - 1, 1)));
 
 /** Posição (0..n-1) que o ponteiro em `px` (relativo ao leque) indica ao arrastar. */
-export function dropIndex(px: number, width: number, n: number): number {
+export function dropIndex(px: number, width: number, n: number, cardW = CARD_W): number {
   if (n <= 1) return 0;
-  const idx = Math.round((px - width / 2) / fanStep(width, n) + (n - 1) / 2);
+  const idx = Math.round((px - width / 2) / fanStep(width, n, cardW) + (n - 1) / 2);
   return Math.max(0, Math.min(n - 1, idx));
 }
+
+// ---- zoom do jogo (-50% .. +50%, 0 = tamanho atual)
+
+export const ZOOM_MIN = -50;
+export const ZOOM_MAX = 50;
+export const ZOOM_STEP = 5;
+
+/** Valor salvo/digitado → percentual válido (inteiro no passo, dentro dos limites); inválido → 0. */
+export function clampZoom(v: unknown): number {
+  const n = typeof v === 'string' ? Number(v) : v;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return 0;
+  return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(n / ZOOM_STEP) * ZOOM_STEP));
+}
+
+/** Percentual do controle → fator multiplicador do tamanho (0 → 1, +50 → 1,5, −50 → 0,5). */
+export const zoomFactor = (pct: number): number => 1 + clampZoom(pct) / 100;
