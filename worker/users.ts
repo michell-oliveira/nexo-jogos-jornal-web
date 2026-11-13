@@ -1,14 +1,17 @@
 /**
- * Usuários cadastrados pelo site (Cloudflare KV). Senha nunca é guardada: só salt + hash PBKDF2-SHA-256.
+ * Usuários cadastrados pelo site (Cloudflare D1, tabela `users`: migrations/0001_users.sql). Senha nunca é guardada: só salt + hash PBKDF2-SHA-256.
  * Os usuários dos secrets (APP_USER/APP_USERS) continuam valendo e não passam por aqui.
  */
 
-/** Subconjunto do KVNamespace que o Worker usa (evita depender dos tipos do runtime). */
-export interface KV {
-  get(key: string): Promise<string | null>;
-  put(key: string, value: string): Promise<void>;
-  delete(key: string): Promise<void>;
-  list(options: { prefix: string; cursor?: string }): Promise<{ keys: { name: string }[]; list_complete: boolean; cursor?: string }>;
+/** Subconjunto do D1Database que o Worker usa (injetável nos testes; evita depender dos tipos do runtime). */
+export interface D1Statement {
+  bind(...values: unknown[]): D1Statement;
+  first<T = Record<string, unknown>>(): Promise<T | null>;
+  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+  run(): Promise<{ meta: { changes: number } }>;
+}
+export interface D1 {
+  prepare(sql: string): D1Statement;
 }
 
 /** 100 000 é o teto de iterações do PBKDF2 no runtime do Workers. */
@@ -16,7 +19,6 @@ export const PBKDF2_ITERATIONS = 100_000;
 export const MIN_PASSWORD = 12;
 export const MAX_PASSWORD = 200;
 export const MAX_USERS = 50;
-const PREFIX = 'u:';
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,39}$/;
 const enc = new TextEncoder();
 
@@ -80,34 +82,60 @@ export async function verifyPassword(password: string, record: UserRecord | null
   return diff === 0;
 }
 
-/** Lê e valida o registro; JSON quebrado ou com forma errada vale como "não existe" (falha fechada). */
-function parseRecord(text: string | null): UserRecord | null {
-  if (!text) return null;
-  try {
-    const r = JSON.parse(text) as Partial<UserRecord> | null;
-    if (!r || typeof r.salt !== 'string' || typeof r.hash !== 'string' || typeof r.iter !== 'number' || typeof r.createdAt !== 'number') return null;
-    return { salt: r.salt, hash: r.hash, iter: r.iter, createdAt: r.createdAt };
-  } catch {
-    return null;
-  }
+interface Row {
+  salt: string;
+  hash: string;
+  iter: number;
+  created_at: number;
+}
+const toRecord = (r: Row): UserRecord => ({ salt: r.salt, hash: r.hash, iter: r.iter, createdAt: r.created_at });
+
+export async function getUser(db: D1, name: string): Promise<UserRecord | null> {
+  const row = await db.prepare('SELECT salt, hash, iter, created_at FROM users WHERE name = ?').bind(name).first<Row>();
+  return row ? toRecord(row) : null;
 }
 
-export const getUser = async (kv: KV, name: string): Promise<UserRecord | null> => parseRecord(await kv.get(PREFIX + name));
-export const putUser = (kv: KV, name: string, record: UserRecord): Promise<void> => kv.put(PREFIX + name, JSON.stringify(record));
-export const deleteUser = (kv: KV, name: string): Promise<void> => kv.delete(PREFIX + name);
+/** Cria ou substitui o registro (upsert). Para cadastro novo use `createUser`, que é atômico e respeita o limite. */
+export async function putUser(db: D1, name: string, r: UserRecord): Promise<void> {
+  await db
+    .prepare(
+      'INSERT INTO users (name, salt, hash, iter, created_at) VALUES (?, ?, ?, ?, ?) ' +
+        'ON CONFLICT(name) DO UPDATE SET salt = excluded.salt, hash = excluded.hash, iter = excluded.iter',
+    )
+    .bind(name, r.salt, r.hash, r.iter, r.createdAt)
+    .run();
+}
 
-export async function listUsers(kv: KV): Promise<{ name: string; createdAt: number }[]> {
-  const names: string[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await kv.list({ prefix: PREFIX, cursor });
-    for (const k of page.keys) names.push(k.name.slice(PREFIX.length));
-    cursor = page.list_complete ? undefined : page.cursor;
-  } while (cursor && names.length < 1000);
-  const out: { name: string; createdAt: number }[] = [];
-  for (const name of names.sort()) {
-    const rec = await getUser(kv, name);
-    if (rec) out.push({ name, createdAt: rec.createdAt });
-  }
-  return out;
+export type CreateResult = 'created' | 'exists' | 'limit';
+
+/**
+ * Cadastro atômico: um único INSERT que não faz nada se o nome já existe ou se o limite foi atingido
+ * (sem a janela "checa e depois grava" que permitiria corrida). Quem não inseriu é desambiguado depois.
+ */
+export async function createUser(db: D1, name: string, r: UserRecord): Promise<CreateResult> {
+  const res = await db
+    .prepare(
+      'INSERT INTO users (name, salt, hash, iter, created_at) SELECT ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM users) < ? ' +
+        'ON CONFLICT(name) DO NOTHING',
+    )
+    .bind(name, r.salt, r.hash, r.iter, r.createdAt, MAX_USERS)
+    .run();
+  if (res.meta.changes > 0) return 'created';
+  return (await getUser(db, name)) ? 'exists' : 'limit';
+}
+
+/** Troca salt/hash só se o usuário existe; devolve false quando não existe. */
+export async function setPassword(db: D1, name: string, r: UserRecord): Promise<boolean> {
+  const res = await db.prepare('UPDATE users SET salt = ?, hash = ?, iter = ? WHERE name = ?').bind(r.salt, r.hash, r.iter, name).run();
+  return res.meta.changes > 0;
+}
+
+/** Remove; devolve false quando o usuário não existia. */
+export async function deleteUser(db: D1, name: string): Promise<boolean> {
+  return (await db.prepare('DELETE FROM users WHERE name = ?').bind(name).run()).meta.changes > 0;
+}
+
+export async function listUsers(db: D1): Promise<{ name: string; createdAt: number }[]> {
+  const { results } = await db.prepare('SELECT name, created_at FROM users ORDER BY name LIMIT 1000').all<{ name: string; created_at: number }>();
+  return results.map((r) => ({ name: r.name, createdAt: r.created_at }));
 }

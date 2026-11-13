@@ -5,6 +5,9 @@
   "compatibility_date": "2026-07-11",
   "routes": [{ "pattern": "nexohorizonte.com.br/jogos-jornal*", "zone_name": "nexohorizonte.com.br" }],
   "kv_namespaces": [{ "binding": "USERS", "id": "5edf350a3fe4421fac2aa2f80633e350" }],
+  // O KV USERS fica só para o scripts/migrate-kv-to-d1.mjs; o Worker não o usa mais em runtime.
+  // SUBSTITUA o database_id pelo id devolvido por `wrangler d1 create jogos-jornal-users` (veja o README).
+  "d1_databases": [{ "binding": "DB", "database_name": "jogos-jornal-users", "database_id": "c1a04721-45df-4c76-aab7-7d96a1a986e3", "migrations_dir": "migrations" }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

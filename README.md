@@ -7,7 +7,7 @@ O acesso exige login; o progresso é salvo por usuário e há 30 temas (`src/cor
 ## Stack
 - **Front-end:** Vite + TypeScript puro (sem framework). Rotas por hash (`#/<jogo>`); cada jogo é carregado sob demanda.
 - **Worker Cloudflare** (`worker/`): login com sessão em cookie assinado (HMAC-SHA-256), limite de tentativas, tela `/admin`
-  para cadastrar usuários (Cloudflare KV, binding `USERS`; senha guardada só como salt + hash PBKDF2-SHA-256) e serviço dos
+  para cadastrar usuários (Cloudflare D1, binding `DB`, tabela `users`; senha guardada só como salt + hash PBKDF2-SHA-256) e serviço dos
   arquivos estáticos de `dist/` (binding `ASSETS`). Rota publicada em `nexohorizonte.com.br/jogos-jornal*` (`wrangler.jsonc`).
 - **Testes:** Vitest + happy-dom.
 
@@ -21,6 +21,20 @@ npm test             # vitest run
 npm run deploy:dry   # build + wrangler deploy --dry-run
 npm run deploy       # build + wrangler deploy (publica em produção)
 ```
+### Banco de usuários (D1) — passo a passo da migração do KV
+Os usuários cadastrados em `/admin` ficam no D1 (plano gratuito), que é fortemente consistente: o cadastro aparece na hora.
+O KV `USERS` continua declarado só para o script de migração. Uma única vez:
+```bash
+npx wrangler d1 create jogos-jornal-users                     # anote o database_id
+# coloque o id em d1_databases[0].database_id do wrangler.jsonc (hoje é um placeholder de zeros)
+npx wrangler d1 migrations apply jogos-jornal-users --remote   # cria a tabela users
+node scripts/migrate-kv-to-d1.mjs --dry-run                    # confere o que será copiado
+node scripts/migrate-kv-to-d1.mjs                              # copia (idempotente: INSERT OR IGNORE)
+npm run deploy                                                 # publica o Worker já usando o D1
+```
+Depois do deploy: entre em `/admin` e confira que os usuários migrados aparecem e conseguem logar com a mesma senha
+(o hash PBKDF2 é o mesmo). `npm run deploy:dry` com o `database_id` de placeholder funciona (não consulta o D1), mas o deploy real exige o id verdadeiro.
+
 O Worker lê os secrets `APP_USER`, `APP_PASSWORD` e `SESSION_SECRET` (opcional: `APP_USERS`). Em desenvolvimento local ficam
 em `.dev.vars`, que **não é versionado**; em produção são secrets do Cloudflare.
 
@@ -33,7 +47,8 @@ src/
   games/<jogo>/      anagram, buraco, cryptogram, g2048, hangman, lightsout, minesweeper,
                      numbermatch, sudoku, takuzu, termo, wordcipher
   games/words/       banco de palavras, teclado e utilitários dos jogos de palavras
-worker/              index.ts (rotas), auth.ts, users.ts, loginPage.ts, adminPage.ts + testes
+worker/              index.ts (rotas), auth.ts, users.ts (D1), loginPage.ts, adminPage.ts + testes
+migrations/          SQL do D1 (0001_users.sql); scripts/migrate-kv-to-d1.mjs copia os usuários do KV antigo
 public/words/        lista de palavras de 5 letras (pt_br_5letras.txt) e NOTICE.txt
 docs/                mockups HTML históricos (login, admin, sudoku, temas, teoria das cores)
 ```
@@ -84,4 +99,4 @@ o seu progresso. Mudar uma chave ou formato apaga o progresso dos jogadores: man
 npx vitest run               # todos
 rtk proxy npx vitest run     # no ambiente do owner (RTK filtra a saída do vitest)
 ```
-Cobrem domínios dos jogos, GameShell (menu, continuar, fim, voltar), armazenamento, Worker (login, sessão, `/admin`, KV).
+Cobrem domínios dos jogos, GameShell (menu, continuar, fim, voltar), armazenamento, Worker (login, sessão, `/admin`, D1).
