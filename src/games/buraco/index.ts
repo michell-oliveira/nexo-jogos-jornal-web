@@ -6,10 +6,11 @@ import { aiStep } from './domain/ai';
 import { isJoker, isWildcard, type Card } from './domain/cards';
 import {
   addToMeld, COMPUTER, discardCard, drawFromStock, HUMAN, matchWinner, newGame, nextRound, playMeld, takeDiscardPile,
-  type GameState, type Result,
+  type GameState, type PlayerIndex, type Result,
 } from './domain/game';
 import { CLEAN_CANASTA_BONUS, DIRTY_CANASTA_BONUS, TARGET_SCORE } from './domain/scoring';
 import { CANASTA_SIZE, isCanasta, isCleanCanasta, type Meld } from './domain/meld';
+import { mineKey, planMoves } from './flights';
 import { CARD_W, dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand, type SortMode } from './handOrder';
 
 const HELP = `<p><strong>Buraco para 2 jogadores</strong>: você contra o computador. Cada um recebe 11 cartas e um <strong>morto</strong> de 11 cartas. A partida é jogada em rodadas até alguém chegar a ${TARGET_SCORE.toLocaleString('pt-BR')} pontos.</p>
@@ -19,6 +20,7 @@ const HELP = `<p><strong>Buraco para 2 jogadores</strong>: você contra o comput
 <p><strong>Mão em leque:</strong> toque numa carta para selecioná-la, arraste para reordenar e solte sobre o Descarte para descartar. <em>Organizar</em> alterna entre agrupar por naipe e por valor.</p>`;
 
 const AI_DELAY_MS = 750;
+const FLY_MS = 320;
 const SUIT_SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' } as const;
 const RANK_TEXT: Record<number, string> = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
 const fmt = (n: number): string => n.toLocaleString('pt-BR');
@@ -171,6 +173,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
   let order: number[] = [];
   let sortMode: SortMode = 'suit'; // o que o próximo clique em Organizar aplica
   let lastRound = -1;
+  let lastKey = '';
   let shownRound = -1;
   const sel = new Set<number>();
   const cardEls = new Map<number, HTMLElement>();
@@ -194,8 +197,80 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     }
     message = okMessage;
     sel.clear();
+    const fly = prepareFlights(state(), r.state, HUMAN);
     host.update(r.state);
+    fly();
     return true;
+  }
+
+  // ---------- animações de voo (carta sai de um lugar e entra no outro; só transform, ~320 ms)
+
+  const reducedMotion = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+  /** Captura as posições de origem ANTES de atualizar o estado; devolve a função que voa as cartas DEPOIS do render. */
+  function prepareFlights(prev: GameState, next: GameState, who: PlayerIndex): () => void {
+    if (reducedMotion()) return () => {};
+    const mv = planMoves(prev, next, who);
+    const mine = who === HUMAN;
+    const pool = [...prev.players[who].hand, ...next.players[who].hand, ...prev.discard, ...next.discard];
+    const cardOf = (id: number): Card | undefined => pool.find((c) => c.id === id);
+    const oppHand = mine ? null : $('bOppHand').getBoundingClientRect();
+    const trash = $('bTrashStack').getBoundingClientRect();
+    const deck = $('bDeckCard').getBoundingClientRect();
+    const fromHand = (id: number): DOMRect | null => (mine ? cardEls.get(id)?.getBoundingClientRect() ?? null : oppHand);
+    const leaving = new Map<number, DOMRect | null>();
+    for (const id of [...mv.melded, ...(mv.discarded !== null ? [mv.discarded] : [])]) leaving.set(id, fromHand(id));
+
+    const jobs: { node: HTMLElement; from: DOMRect | null; to: () => Element | null | undefined }[] = [];
+    if (mv.drawn) {
+      for (const id of mv.drawn.ids) {
+        const c = cardOf(id);
+        jobs.push({
+          node: mv.drawn.source === 'pile' && c ? cardEl(c) : backEl(),
+          from: mv.drawn.source === 'pile' ? trash : deck,
+          to: () => (mine ? cardEls.get(id) : $('bOppHand').lastElementChild),
+        });
+      }
+    }
+    for (const id of mv.melded) {
+      const c = cardOf(id);
+      if (c) jobs.push({ node: cardEl(c), from: leaving.get(id) ?? null, to: () => $(mine ? 'bMyMelds' : 'bOppMelds').querySelector(`[data-id="${id}"]`) });
+    }
+    if (mv.discarded !== null) {
+      const c = cardOf(mv.discarded);
+      if (c) jobs.push({ node: cardEl(c), from: leaving.get(mv.discarded) ?? null, to: () => $('bTrashStack').lastElementChild });
+    }
+
+    return () => {
+      jobs.forEach((j, i) => {
+        const to = j.to() as HTMLElement | null | undefined;
+        if (!to || !j.from) return;
+        const t = to.getBoundingClientRect();
+        const dx = t.left + t.width / 2 - (j.from.left + j.from.width / 2);
+        const dy = t.top + t.height / 2 - (j.from.top + j.from.height / 2);
+        const scale = Math.min(1, (to.offsetWidth || CARD_W) / CARD_W);
+        const f = j.node;
+        f.classList.add('bFlyer');
+        f.style.left = `${j.from.left + j.from.width / 2 - CARD_W / 2}px`;
+        f.style.top = `${j.from.top + j.from.height / 2 - 31}px`;
+        document.body.appendChild(f);
+        to.style.visibility = 'hidden';
+        const done = (): void => {
+          f.remove();
+          to.style.visibility = '';
+        };
+        const anim = f.animate(
+          [
+            { transform: 'translate(0, 0) rotate(0deg) scale(1)' },
+            { transform: `translate(${dx}px, ${dy}px) rotate(${to.dataset.ang ?? 0}deg) scale(${scale})` },
+          ],
+          { duration: FLY_MS, delay: Math.min(i, 6) * 45, easing: 'ease-out', fill: 'both' },
+        );
+        anim.onfinish = done;
+        anim.oncancel = done;
+        window.setTimeout(done, FLY_MS + 400); // rede de segurança (aba em segundo plano pode adiar o evento)
+      });
+    };
   }
 
   // ---------- leque
@@ -213,6 +288,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
       e.style.zIndex = String(selected ? 40 : i);
       if (drag?.moved && drag.id === id) return;
       const k = i - (n - 1) / 2;
+      e.dataset.ang = String(k * ang);
       e.style.transform = `translate(${W / 2 - CARD_W / 2 + k * step}px, ${k * k * 1.1 - (selected ? 22 : 0)}px) rotate(${k * ang}deg)`;
     });
   }
@@ -243,7 +319,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     if (sel.has(id)) sel.delete(id);
     else sel.add(id);
     layout();
-    renderTable(state()); // realça os jogos da mesa que aceitam a seleção
+    renderMyMelds(state()); // realça os jogos da mesa que aceitam a seleção
     updateButtons();
   }
 
@@ -358,7 +434,11 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
         box.appendChild(el('span', `bBadge ${clean ? 'limpa' : 'suja'}`, `${clean ? 'Limpa' : 'Suja'} ${clean ? CLEAN_CANASTA_BONUS : DIRTY_CANASTA_BONUS}`));
       }
       const row = el('div', 'bMeldCards');
-      m.cards.forEach((c, i) => row.appendChild(cardEl(c, '', isWildInMeld(m, i))));
+      m.cards.forEach((c, i) => {
+        const ce = cardEl(c, '', isWildInMeld(m, i));
+        ce.dataset.id = String(c.id);
+        row.appendChild(ce);
+      });
       box.appendChild(row);
       if (mine && myTurn(s) && s.phase === 'play' && ids.length > 0 && addToMeld(s, m.id, ids).ok) {
         box.classList.add('target');
@@ -379,13 +459,22 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
   }
 
   function renderTable(s: GameState): void {
-    const me = s.players[HUMAN];
-    const cpu = s.players[COMPUTER];
     $('bMe').textContent = fmt(s.matchScore[0]);
     $('bCpu').textContent = fmt(s.matchScore[1]);
     $('bRound').textContent = `Rodada ${s.round} · meta ${fmt(TARGET_SCORE)}`;
+    renderOpp(s);
+    renderPiles(s);
+  }
+
+  function renderOpp(s: GameState): void {
+    const cpu = s.players[COMPUTER];
     $('bOppHand').replaceChildren(...Array.from({ length: Math.min(cpu.hand.length, 14) }, () => backEl()));
     $('bOppInfo').textContent = `${cpu.hand.length} cartas · Morto: ${cpu.tookDead ? 'já pegou' : 'ainda não pegou'}`;
+    renderMelds($('bOppMelds'), cpu.melds, false, s);
+  }
+
+  function renderPiles(s: GameState): void {
+    const me = s.players[HUMAN];
     $('bDeckCard').replaceChildren(s.stock.length > 0 ? backEl() : el('div', 'bcard empty', 'vazio'));
     $('bDeckN').textContent = `${s.stock.length} cartas`;
     const top = s.discard.slice(-5);
@@ -401,8 +490,10 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     const draw = myTurn(s) && s.phase === 'draw';
     deckEl.classList.toggle('act', draw && s.stock.length > 0);
     trashEl.classList.toggle('act', draw && s.discard.length > 0);
-    renderMelds($('bOppMelds'), cpu.melds, false, s);
-    renderMelds($('bMyMelds'), me.melds, true, s);
+  }
+
+  function renderMyMelds(s: GameState): void {
+    renderMelds($('bMyMelds'), s.players[HUMAN].melds, true, s);
   }
 
   function phaseMessage(s: GameState): string {
@@ -438,24 +529,36 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     }
     if (!r.ok) return;
     message = describeAi(s, r.state);
+    const fly = prepareFlights(s, r.state, COMPUTER);
     host.update(r.state);
+    fly();
   }
 
   // ---------- render
 
   function render(s: GameState): void {
-    if (lastRound !== s.round) {
-      lastRound = s.round;
-      order = sortHand(handOf(s), 'suit').map((c) => c.id);
-      sortMode = 'rank';
-      sel.clear();
-    } else {
-      order = reconcileOrder(order, handOf(s));
+    renderTable(s); // placar, computador, monte, descarte e morto
+    // Minha mão e minha mesa só são refeitas quando MINHA área muda (as jogadas do computador não a tocam).
+    const key = mineKey(s);
+    if (key !== lastKey) {
+      lastKey = key;
+      if (lastRound !== s.round) {
+        lastRound = s.round;
+        order = sortHand(handOf(s), 'suit').map((c) => c.id);
+        sortMode = 'rank';
+        sel.clear();
+      } else {
+        order = reconcileOrder(order, handOf(s));
+      }
+      for (const id of [...sel]) if (!order.includes(id)) sel.delete(id);
+      renderMyMelds(s);
+      renderHand(s);
     }
-    for (const id of [...sel]) if (!order.includes(id)) sel.delete(id);
-    if (s.phase !== 'play' || s.current !== HUMAN) sel.clear();
-    renderTable(s);
-    renderHand(s);
+    if (sel.size > 0 && (s.phase !== 'play' || s.current !== HUMAN)) {
+      sel.clear(); // fora da minha jogada não há seleção (só ajusta o leque, sem recriar as cartas)
+      layout();
+      renderMyMelds(s);
+    }
     msgEl.textContent = phaseMessage(s);
     updateButtons();
     if (s.phase === 'over' && !isMatchOver(s) && shownRound !== s.round) {

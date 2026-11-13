@@ -566,6 +566,8 @@ a.hubCard:hover { border-color: var(--primary); }
 .bHand .bcard { position: absolute; bottom: 0; left: 0; cursor: grab; transition: transform 0.15s; box-shadow: 0 1px 3px #0004; }
 .bHand .bcard.sel { outline: 2px solid var(--primary); box-shadow: 0 8px 14px #0005; }
 .bHand .bcard.drag { z-index: 99 !important; cursor: grabbing; transition: none; box-shadow: 0 6px 14px #0006; }
+.bFlyer { position: fixed; z-index: 300; margin: 0; pointer-events: none; will-change: transform; box-shadow: 0 6px 14px #0005; }
+@media (prefers-reduced-motion: reduce) { .bHand .bcard { transition: none; } }
 .bActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
 .bActions .btn.new { outline: 2px dashed var(--error); outline-offset: 2px; }
 .buracoTable { width: 100%; font-size: 14px; border-collapse: collapse; }
