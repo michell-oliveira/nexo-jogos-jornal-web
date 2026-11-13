@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup — Buraco (2 jogadores)</title>
+<style>
+:root{--bg:#fff;--surface:#f4f4f4;--variant:#e0e0e0;--fg:#121212;--primary:#1565c0;--outline:#9e9e9e;--new:#c62828;--felt:#e8f0e6;--red:#c62828;--wild:#fff3cd}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;padding:16px;max-width:760px;margin-inline:auto}
+h1{font:700 28px Georgia,serif;margin:0 0 4px}
+h2{font-size:14px;margin:0 0 6px;color:#555;font-weight:600}
+.btn{background:var(--variant);border:0;border-radius:6px;padding:9px 14px;font:inherit;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.status{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px 0;flex-wrap:wrap}
+.score{display:flex;justify-content:space-between;gap:8px;background:var(--surface);border-radius:8px;padding:8px 12px;font-size:14px;flex-wrap:wrap}
+.score b{font-size:18px}
+.table{background:var(--felt);border-radius:10px;padding:10px;margin:10px 0}
+.zone{margin-bottom:10px}
+.melds{display:flex;gap:10px;flex-wrap:wrap;min-height:78px;align-items:flex-start}
+.meld{position:relative;padding-top:16px}
+.meld .cards{display:flex}
+.meld .cards .card{margin-left:-20px;width:40px;height:58px;font-size:14px}
+.meld .cards .card:first-child{margin-left:0}
+.badge{position:absolute;top:0;left:0;font-size:11px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--fg);color:#fff}
+.badge.limpa{background:#2e7d32}.badge.suja{background:#ef6c00}
+.card{width:44px;height:62px;background:#fff;border:1px solid var(--outline);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 15px system-ui;line-height:1.1;flex:none;user-select:none}
+.card.r{color:var(--red)}
+.meld .cards .card{align-items:flex-start;padding:4px 0 0 4px}
+.meld .cards .card:last-child{align-items:center;padding:0}
+.card.wild{background:var(--wild);border-color:#c9a227}
+.card.back{background:repeating-linear-gradient(45deg,#1565c0,#1565c0 5px,#0d47a1 5px,#0d47a1 10px);border-color:#0d47a1;color:transparent}
+.card.empty{background:transparent;border:2px dashed var(--outline);color:var(--outline);font-weight:400;font-size:12px}
+.card.sel{outline:3px solid var(--primary)}
+.center{display:flex;gap:18px;justify-content:center;align-items:flex-end;margin:6px 0 12px;flex-wrap:wrap}
+.pile{text-align:center;font-size:12px}
+.pile .card{margin:0 auto 4px}
+.pile.act .card{cursor:pointer;outline:3px dashed var(--new);outline-offset:2px}
+.pile.dead .card{opacity:.85}
+.stack{position:relative;width:44px;height:62px;margin:0 auto 4px}
+.stack .card{position:absolute;top:0}
+.hand{position:relative;height:122px;margin:10px 0 14px;touch-action:none;outline:2px dashed var(--new);outline-offset:3px;border-radius:8px}
+.hand .card{position:absolute;left:0;bottom:0;cursor:grab;transition:transform .15s;box-shadow:0 1px 3px #0004}
+.hand .card:not(.drag):hover{translate:0 -8px}
+.hand .card.sel{translate:0 -24px;outline:2px solid var(--primary);box-shadow:0 8px 14px #0005}
+.hand .card.drag{transition:none;cursor:grabbing;z-index:99!important;box-shadow:0 6px 14px #0006}
+.dropHint{outline:3px dashed var(--new);outline-offset:3px}
+.actions{display:flex;gap:8px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.msg{text-align:center;font-weight:600;margin:6px 0}
+.tag{color:var(--new);font-size:12px;font-weight:600}
+.note{font-size:13px;color:#555;margin:4px 0 14px}
+.new{outline:2px dashed var(--new);outline-offset:3px}
+.opp{display:flex;align-items:center;gap:10px;font-size:13px;margin-bottom:6px;flex-wrap:wrap}
+.mini{display:flex}.mini .card{width:22px;height:31px;margin-left:-14px;font-size:0}
+.mini .card:first-child{margin-left:0}
+dialog{border:1px solid var(--outline);border-radius:10px;padding:18px;max-width:340px}
+table{width:100%;border-collapse:collapse}th,td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--variant)}th:first-child,td:first-child{text-align:left}
+</style></head><body>
+<h1>Buraco <small style="font:14px Georgia;color:#555">mockup — 2 jogadores, contra o computador</small></h1>
+<p class="note">Tudo na tela é novo. As bordas tracejadas em vermelho marcam o que está <b>ativo</b> naquele momento do turno. Clique nas cartas da sua mão para selecioná-las; clique no Monte ou no Descarte para comprar.</p>
+
+<div class="status">
+  <button class="btn">Menu</button>
+  <span id="phase" class="tag"></span>
+  <button class="btn">⏸ Pausar</button>
+  <button class="btn">⚙</button>
+  <button class="btn">Placar ▾</button>
+</div>
+
+<div class="score">
+  <span>Você <b>1.240</b></span>
+  <span>Rodada 3 · meta 3.000</span>
+  <span>Computador <b>980</b></span>
+</div>
+
+<div class="table">
+  <div class="zone">
+    <div class="opp"><b>Computador</b>
+      <span class="mini" id="oppHand"></span><span>8 cartas</span>
+      <span>· Morto: <b>ainda não pegou</b></span></div>
+    <div class="melds" id="oppMelds"></div>
+  </div>
+
+  <div class="center">
+    <div class="pile" id="deck"><div class="card back">·</div>Monte<br><small>54 cartas</small></div>
+    <div class="pile" id="trash"><div class="stack" id="trashStack"></div>Descarte<br><small id="trashN">5 cartas</small></div>
+    <div class="pile dead"><div class="card back">·</div>Seu morto<br><small>11 cartas</small></div>
+  </div>
+
+  <div class="zone">
+    <h2>Seus jogos na mesa</h2>
+    <div class="melds" id="myMelds"></div>
+  </div>
+</div>
+
+<div class="msg" id="msg"></div>
+<div class="hand" id="hand"></div>
+<div class="actions">
+  <button class="btn new" id="sortBtn">⇅ Organizar: por naipe</button>
+</div>
+<div class="actions">
+  <button class="btn primary" id="meldBtn" disabled>Baixar jogo</button>
+  <button class="btn" id="addBtn" disabled>Acrescentar a jogo da mesa</button>
+  <button class="btn" id="discardBtn" disabled>Descartar</button>
+  <button class="btn" id="knockBtn" disabled title="Só com ao menos uma canastra">Bater</button>
+</div>
+<p class="note">• <b>Mão em leque:</b> clique numa carta para selecioná-la; <b>arraste</b> para mudar a ordem (as outras abrem espaço); solte uma carta sobre o Descarte (na fase de jogar) para descartá-la. <b>Organizar</b> alterna entre agrupar por naipe e por valor.<br>
+• Baixar jogo: 3+ cartas do mesmo naipe em sequência (o 2 e o coringa substituem uma carta; no máximo um por jogo).<br>
+• Rótulo <b>Limpa</b> (200) ou <b>Suja</b> (100) aparece ao completar 7 cartas. Antes disso o jogo fica sem rótulo.<br>
+• Carta amarela = curinga. Ao pegar o Descarte você leva a pilha toda (o Descarte tem borda vermelha quando for sua vez de comprar).<br>
+• Bater exige ao menos uma canastra; ao esvaziar a mão sem bater, você pega o morto.</p>
+
+<button class="btn" id="endBtn">Ver fim de rodada</button>
+<dialog id="dlg">
+  <h2>Fim da rodada 3</h2>
+  <table>
+    <tr><th></th><th>Você</th><th>Comput.</th></tr>
+    <tr><td>Canastras</td><td>300</td><td>100</td></tr>
+    <tr><td>Cartas baixadas</td><td>+285</td><td>+140</td></tr>
+    <tr><td>Bateu</td><td>+100</td><td>—</td></tr>
+    <tr><td>Cartas na mão</td><td>—</td><td>−65</td></tr>
+    <tr><td><b>Rodada</b></td><td><b>+685</b></td><td><b>+175</b></td></tr>
+    <tr><td><b>Total</b></td><td><b>1.925</b></td><td><b>1.155</b></td></tr>
+  </table>
+  <p style="text-align:center;margin:14px 0 0"><button class="btn primary" onclick="dlg.close()">Próxima rodada</button></p>
+</dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+const S={'♠':0,'♥':1,'♦':1,'♣':0};
+const card=(r,s,cls='')=>`<div class="card ${S[s]?'r':''} ${cls}"><span>${r}</span><span>${s}</span></div>`;
+const wild=(r='2',s='♠')=>card(r,s,'wild');
+const meld=(cards,badge)=>`<div class="meld">${badge?`<span class="badge ${badge.toLowerCase()}">${badge} ${badge==='Limpa'?200:100}</span>`:''}<div class="cards">${cards.join('')}</div></div>`;
+$('myMelds').innerHTML=
+  meld([card('3','♥'),card('4','♥'),card('5','♥'),card('6','♥'),card('7','♥'),card('8','♥'),card('9','♥')],'Limpa')+
+  meld([card('J','♣'),card('Q','♣'),wild('2','♥'),card('A','♣')]);
+$('oppMelds').innerHTML=
+  meld([card('5','♠'),card('6','♠'),card('7','♠'),card('8','♠')])+
+  meld([card('9','♦'),card('10','♦'),card('J','♦'),wild('2','♣'),card('K','♦'),card('A','♦'),card('2','♦')],'Suja');
+$('oppHand').innerHTML=Array(5).fill('<div class="card back">·</div>').join('');
+$('trashStack').innerHTML=[card('4','♣'),card('9','♠'),card('K','♥'),card('7','♦'),card('Q','♠')].map((c,i)=>c.replace('class="card','style="left:'+(i*9)+'px" class="card')).join('');
+$('trashStack').style.width='80px';
+
+let hand=[['4','♥'],['7','♥'],['9','♠'],['9','♦'],['10','♠'],['J','♠'],['Q','♠'],['K','♣'],['2','♦'],['A','♠'],['3','♣']].map((h,i)=>({id:i,r:h[0],s:h[1]}));
+let sel=new Set(),phase='buy',drag=null,sortMode='naipe';
+const RK={A:1,J:11,Q:12,K:13},rv=r=>RK[r]||+r,SO={'♠':0,'♥':1,'♣':2,'♦':3};
+const CW=44;
+function render(){
+  const h=$('hand');h.innerHTML='';
+  hand.forEach(c=>{
+    h.insertAdjacentHTML('beforeend',card(c.r,c.s,c.r==='2'?'wild':'').replace('class="card','data-id="'+c.id+'" class="card'));
+    const el=h.lastElementChild;el.onpointerdown=e=>down(e,c.id,el);
+  });
+  layout();
+}
+function layout(){
+  const h=$('hand'),W=h.clientWidth,n=hand.length;
+  const step=Math.min(34,(W-CW-8)/Math.max(n-1,1)),ang=Math.min(5,50/Math.max(n-1,1));
+  hand.forEach((c,i)=>{
+    const el=h.querySelector('[data-id="'+c.id+'"]');if(!el)return;
+    el.classList.toggle('sel',sel.has(c.id));el.style.zIndex=sel.has(c.id)?40:i;
+    if(drag&&drag.moved&&drag.id===c.id)return;
+    const k=i-(n-1)/2;
+    el.style.transform='translate('+(W/2-CW/2+k*step)+'px,'+(k*k*1.1)+'px) rotate('+(k*ang)+'deg)';
+  });
+}
+function down(e,id,el){
+  if(phase==='wait')return;
+  el.setPointerCapture(e.pointerId);
+  drag={id,el,x0:e.clientX,y0:e.clientY,moved:false};
+  el.onpointermove=move;el.onpointerup=up;el.onpointercancel=up;
+}
+function move(e){
+  if(!drag)return;
+  const dx=e.clientX-drag.x0,dy=e.clientY-drag.y0;
+  if(!drag.moved&&Math.hypot(dx,dy)<6)return;
+  drag.moved=true;drag.el.classList.add('drag');
+  const h=$('hand'),r=h.getBoundingClientRect(),W=r.width,n=hand.length;
+  const px=e.clientX-r.left,py=e.clientY-r.top;
+  drag.el.style.transform='translate('+(px-CW/2)+'px,'+(py-31-r.height+62)+'px)';
+  const step=Math.min(34,(W-CW-8)/Math.max(n-1,1));
+  const idx=Math.max(0,Math.min(n-1,Math.round((px-W/2)/step+(n-1)/2)));
+  const cur=hand.findIndex(c=>c.id===drag.id);
+  if(idx!==cur){const [c]=hand.splice(cur,1);hand.splice(idx,0,c);}
+  const tr=$('trash').getBoundingClientRect();
+  const over=e.clientX>tr.left&&e.clientX<tr.right&&e.clientY>tr.top&&e.clientY<tr.bottom;
+  $('trash').classList.toggle('dropHint',over&&phase==='play');
+  layout();
+}
+function up(e){
+  if(!drag)return;
+  const d=drag;drag=null;d.el.classList.remove('drag');
+  d.el.onpointermove=d.el.onpointerup=d.el.onpointercancel=null;
+  const tr=$('trash').getBoundingClientRect();
+  $('trash').classList.remove('dropHint');
+  if(d.moved){
+    if(phase==='play'&&e.clientX>tr.left&&e.clientX<tr.right&&e.clientY>tr.top&&e.clientY<tr.bottom){hand=hand.filter(c=>c.id!==d.id);sel.delete(d.id);render();btns();endTurn();return;}
+    layout();return;
+  }
+  if(phase!=='play')return;
+  sel.has(d.id)?sel.delete(d.id):sel.add(d.id);layout();btns();
+}
+function btns(){
+  const on=phase==='play';
+  meldBtn.disabled=!(on&&sel.size>=3);
+  addBtn.disabled=!(on&&sel.size>=1);
+  discardBtn.disabled=!(on&&sel.size===1);
+  knockBtn.disabled=!(on&&hand.length<=1);
+  meldBtn.classList.toggle('new',!meldBtn.disabled);discardBtn.classList.toggle('new',!discardBtn.disabled);
+}
+function setPhase(p){
+  phase=p;sel.clear();
+  $('deck').classList.toggle('act',p==='buy');$('trash').classList.toggle('act',p==='buy');
+  $('phase').textContent=p==='buy'?'Sua vez · 1) compre':p==='play'?'Sua vez · 2) baixe jogos e descarte':'Vez do computador…';
+  $('msg').textContent=p==='buy'?'Compre do Monte ou pegue o Descarte (pilha toda).':p==='play'?'Selecione cartas para baixar um jogo, ou 1 carta para descartar.':'';
+  layout();btns();
+}
+function endTurn(){setPhase('wait');setTimeout(()=>{hand.push({id:Date.now()%1e6,r:'5',s:'♦'});sel.clear();render();setPhase('buy')},1200)}
+function organize(){
+  hand.sort((a,b)=>sortMode==='naipe'?(SO[a.s]-SO[b.s])||(rv(a.r)-rv(b.r)):(rv(a.r)-rv(b.r))||(SO[a.s]-SO[b.s]));
+  sortBtn.textContent='⇅ Organizar: por '+(sortMode==='naipe'?'valor':'naipe');
+  sortMode=sortMode==='naipe'?'valor':'naipe';
+  layout();
+}
+sortBtn.onclick=organize;
+addEventListener('resize',layout);
+$('deck').onclick=()=>{if(phase==='buy'){hand.push({id:100+hand.length,r:'8',s:'♣'});render();setPhase('play')}};
+$('trash').onclick=()=>{if(phase==='buy'){hand.push({id:200+hand.length,r:'Q',s:'♠'});render();setPhase('play')}};
+discardBtn.onclick=()=>{hand=hand.filter(c=>!sel.has(c.id));render();endTurn()};
+$('endBtn').onclick=()=>dlg.showModal();
+render();setPhase('buy');
+</script></body></html>
