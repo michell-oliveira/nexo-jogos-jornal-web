@@ -577,6 +577,19 @@ a.hubCard:hover { border-color: var(--primary); }
 @media (prefers-reduced-motion: reduce) { .bHand .bcard { transition: none; } }
 .bActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
 .bActions .btn.new { outline: 2px dashed var(--error); outline-offset: 2px; }
+.buracoGame .btn { min-height: 40px; }
+/* Celular: mão, mensagem e botões ficam colados ao rodapé da tela (a mesa rola por trás); botões em fileira única que quebra */
+@media (max-width: 600px) {
+  .bDock { position: sticky; bottom: 0; z-index: 30; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding-bottom: 6px; background: var(--bg); box-shadow: 0 -6px 8px -6px #0006; }
+  .bDock .bMsg, .bDock .bHand { flex: 0 0 100%; }
+  .bDock .bMsg { min-height: 0; margin: 4px 0 0; font-size: 13px; }
+  .bDock .bHand { margin: 0 0 12px; }
+  .bDock .bActions { display: contents; }
+  .bDock .btn { padding: 6px 8px; font-size: 13px; }
+  .bDock #bDiscard { order: 3; }
+  .bDock #bKnock { order: 4; }
+  .bDock #bAdd { order: 5; }
+}
 .buracoTable { width: 100%; font-size: 14px; border-collapse: collapse; }
 .buracoTable th, .buracoTable td { padding: 5px 8px; text-align: right; border-bottom: 1px solid var(--variant); }
 .buracoTable th:first-child, .buracoTable td:first-child { text-align: left; }

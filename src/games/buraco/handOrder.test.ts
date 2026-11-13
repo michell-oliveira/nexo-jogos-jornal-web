@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, Suit } from './domain/cards';
-import { clampZoom, zoomFactor, dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand } from './handOrder';
+import { fanY, FAN_MAX_RISE, clampZoom, zoomFactor, dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand } from './handOrder';
 
 const card = (id: number, suit: Suit | null, rank: number): Card => ({ id, suit, rank });
 const ids = (cs: readonly Card[]): number[] => cs.map((c) => c.id);
@@ -66,5 +66,16 @@ describe('geometria do leque', () => {
     expect(dropIndex(-500, 700, 11)).toBe(0);
     expect(dropIndex(5000, 700, 11)).toBe(10);
     expect(dropIndex(10, 700, 1)).toBe(0);
+  });
+  it('fanY: pontas na base, centro acima; nunca abaixo da base nem além do limite (mão cheia)', () => {
+    expect(fanY(-5.5, 12)).toBeCloseTo(0);
+    expect(fanY(0.5, 12)).toBeLessThan(0);
+    for (const n of [1, 2, 11, 12, 20, 30]) {
+      for (let i = 0; i < n; i++) {
+        const y = fanY(i - (n - 1) / 2, n);
+        expect(y).toBeLessThanOrEqual(1e-9);
+        expect(y).toBeGreaterThanOrEqual(-FAN_MAX_RISE - 1e-9);
+      }
+    }
   });
 });
