@@ -48,6 +48,20 @@ export const CARD_W = 44;
 export const fanStep = (width: number, n: number, cardW = CARD_W): number =>
   Math.max(8, Math.min(cardW / 2, (width - cardW - 8) / Math.max(n - 1, 1)));
 
+export const FAN_MAX_RISE = 38;
+
+/**
+ * Deslocamento vertical (px, ≤ 0) da carta na posição `k` (0 = centro, negativo à esquerda) num leque de `n`:
+ * as pontas ficam na linha de base e o centro sobe, no máximo FAN_MAX_RISE. Assim o leque nunca desce
+ * para fora da caixa da mão (antes, com mão cheia, as pontas cobriam os botões abaixo).
+ */
+export function fanY(k: number, n: number): number {
+  const kmax = (n - 1) / 2;
+  if (kmax <= 0) return 0;
+  const depth = Math.min(1.1, FAN_MAX_RISE / (kmax * kmax));
+  return (k * k - kmax * kmax) * depth;
+}
+
 /** Posição (0..n-1) que o ponteiro em `px` (relativo ao leque) indica ao arrastar. */
 export function dropIndex(px: number, width: number, n: number, cardW = CARD_W): number {
   if (n <= 1) return 0;

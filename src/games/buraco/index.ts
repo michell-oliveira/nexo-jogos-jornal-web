@@ -11,7 +11,7 @@ import {
 import { CLEAN_CANASTA_BONUS, DIRTY_CANASTA_BONUS, TARGET_SCORE } from './domain/scoring';
 import { CANASTA_SIZE, isCanasta, isCleanCanasta, type Meld } from './domain/meld';
 import { mineKey, planMoves } from './flights';
-import { CARD_W, clampZoom, dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, zoomFactor, type SortMode } from './handOrder';
+import { CARD_W, clampZoom, dropIndex, fanStep, fanY, moveId, nextSortMode, reconcileOrder, sortHand, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, zoomFactor, type SortMode } from './handOrder';
 
 const HELP = `<p><strong>Buraco para 2 jogadores</strong>: você contra o computador. Cada um recebe 11 cartas e um <strong>morto</strong> de 11 cartas. A partida é jogada em rodadas até alguém chegar a ${TARGET_SCORE.toLocaleString('pt-BR')} pontos.</p>
 <p><strong>Sua vez:</strong> 1) compre do <em>Monte</em> ou pegue o <em>Descarte</em> inteiro; 2) baixe jogos, acrescente cartas aos seus jogos e termine descartando uma carta.</p>
@@ -154,6 +154,7 @@ const BOARD = `
     <div class="bMelds" id="bMyMelds"></div>
   </div>
 </div>
+<div class="bDock">
 <div class="bMsg" id="bMsg" aria-live="polite"></div>
 <div class="bHand" id="bHand"></div>
 <div class="bActions"><button id="bSort" class="btn" type="button"></button></div>
@@ -162,6 +163,7 @@ const BOARD = `
   <button id="bAdd" class="btn" type="button">Acrescentar a jogo da mesa</button>
   <button id="bDiscard" class="btn" type="button">Descartar</button>
   <button id="bKnock" class="btn" type="button" title="Só com ao menos uma canastra">Bater</button>
+</div>
 </div>`;
 
 function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameContext) {
@@ -307,7 +309,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
       if (drag?.moved && drag.id === id) return;
       const k = i - (n - 1) / 2;
       e.dataset.ang = String(k * ang);
-      e.style.transform = `translate(${W / 2 - cw() / 2 + k * step}px, ${(k * k * 1.1 - (selected ? 22 : 0)) * z}px) rotate(${k * ang}deg)`;
+      e.style.transform = `translate(${W / 2 - cw() / 2 + k * step}px, ${(fanY(k, n) - (selected ? 22 : 0)) * z}px) rotate(${k * ang}deg)`;
     });
   }
 
@@ -427,7 +429,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     trashEl.classList.toggle('act', (drawing && s.discard.length > 0) || !discardBtn.disabled);
     meldBtn.classList.toggle('new', !meldBtn.disabled);
     discardBtn.classList.toggle('new', !discardBtn.disabled);
-    sortBtn.textContent = `⇅ Organizar: por ${sortMode === 'suit' ? 'naipe' : 'valor'}`;
+    sortBtn.textContent = `⇅ Organizar: ${sortMode === 'suit' ? 'naipe' : 'valor'}`;
   }
 
   function drawFlow(r: Result, text: string): void {
