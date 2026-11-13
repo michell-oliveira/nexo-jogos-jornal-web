@@ -22,4 +22,5 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'anagram', title: 'Anagrama', description: 'Reordene as letras e descubra a palavra.', icon: '🔀', load: () => import('../games/anagram').then((m) => m.anagram) },
   { id: 'cryptogram', title: 'Criptograma', description: 'Decifre a frase em que cada letra virou um símbolo.', icon: '🔐', load: () => import('../games/cryptogram').then((m) => m.cryptogram) },
   { id: 'wordcipher', title: 'Palavras Cifradas', description: 'Decifre as palavras escondidas na cifra.', icon: '🗝️', load: () => import('../games/wordcipher').then((m) => m.wordcipher) },
+  { id: 'buraco', title: 'Buraco', description: 'Forme jogos e canastras contra o computador (2 jogadores).', icon: '🃏', load: () => import('../games/buraco').then((m) => m.buraco) },
 ];

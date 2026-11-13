@@ -1,7 +1,7 @@
 # Jogos de Jornal (web)
 
-Portal com os 11 jogos do app Android `old_games`, no ar em **https://nexohorizonte.com.br/jogos-jornal/**:
-Sudoku, 2048, Lights Out, Campo Minado, Takuzu, Number Match, Termo, Forca, Anagrama, Criptograma e Palavras Cifradas.
+Portal com os 11 jogos do app Android `old_games` (mais o Buraco, novo, contra o computador), no ar em **https://nexohorizonte.com.br/jogos-jornal/**:
+Sudoku, 2048, Lights Out, Campo Minado, Takuzu, Number Match, Termo, Forca, Anagrama, Criptograma, Palavras Cifradas e Buraco.
 O acesso exige login; o progresso é salvo por usuário e há 30 temas (`src/core/theme.ts`).
 
 ## Stack
@@ -30,7 +30,7 @@ src/
   main.ts            hub, rotas por hash, cabeçalho, temas
   style.css
   core/              núcleo compartilhado (ver GameShell abaixo)
-  games/<jogo>/      anagram, cryptogram, g2048, hangman, lightsout, minesweeper,
+  games/<jogo>/      anagram, buraco, cryptogram, g2048, hangman, lightsout, minesweeper,
                      numbermatch, sudoku, takuzu, termo, wordcipher
   games/words/       banco de palavras, teclado e utilitários dos jogos de palavras
 worker/              index.ts (rotas), auth.ts, users.ts, loginPage.ts, adminPage.ts + testes
