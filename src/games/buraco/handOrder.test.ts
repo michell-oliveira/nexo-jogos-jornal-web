@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, Suit } from './domain/cards';
-import { dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand } from './handOrder';
+import { clampZoom, zoomFactor, dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand } from './handOrder';
 
 const card = (id: number, suit: Suit | null, rank: number): Card => ({ id, suit, rank });
 const ids = (cs: readonly Card[]): number[] => cs.map((c) => c.id);
@@ -48,7 +48,16 @@ describe('reconcileOrder', () => {
 
 describe('geometria do leque', () => {
   it('passo limitado a 34 e encolhe em telas estreitas', () => {
-    expect(fanStep(700, 11)).toBe(34);
+    expect(fanStep(700, 11)).toBe(22);
+    expect(fanStep(700, 11, 66)).toBe(33);
+    expect(clampZoom('15')).toBe(15);
+    expect(clampZoom(80)).toBe(50);
+    expect(clampZoom(-999)).toBe(-50);
+    expect(clampZoom('abc')).toBe(0);
+    expect(clampZoom(null)).toBe(0);
+    expect(zoomFactor(0)).toBe(1);
+    expect(zoomFactor(50)).toBe(1.5);
+    expect(zoomFactor(-50)).toBe(0.5);
     expect(fanStep(300, 20)).toBeLessThan(34);
     expect(fanStep(100, 30)).toBeGreaterThanOrEqual(8);
   });

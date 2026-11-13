@@ -82,6 +82,14 @@ export function matchWinner(state: GameState): PlayerIndex | null {
   return a > b ? 0 : 1;
 }
 
+/** Quem fez mais pontos na rodada encerrada (bater só encerra a rodada; a partida vai até a meta). Empate ou sem resultado → null. */
+export function roundWinner(state: GameState): PlayerIndex | null {
+  if (!state.result) return null;
+  const [a, b] = state.result.scores;
+  if (a.total === b.total) return null;
+  return a.total > b.total ? 0 : 1;
+}
+
 // ---------------------------------------------------------------- utilitários internos
 
 const withPlayer = (state: GameState, p: PlayerIndex, patch: Partial<PlayerState>): GameState => {

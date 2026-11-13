@@ -5,26 +5,33 @@ import type { GameContext } from '../../core/types';
 import { aiStep } from './domain/ai';
 import { isJoker, isWildcard, type Card } from './domain/cards';
 import {
-  addToMeld, COMPUTER, discardCard, drawFromStock, HUMAN, matchWinner, newGame, nextRound, playMeld, takeDiscardPile,
+  addToMeld, COMPUTER, discardCard, drawFromStock, HUMAN, matchWinner, newGame, nextRound, playMeld, roundWinner, takeDiscardPile,
   type GameState, type PlayerIndex, type Result,
 } from './domain/game';
 import { CLEAN_CANASTA_BONUS, DIRTY_CANASTA_BONUS, TARGET_SCORE } from './domain/scoring';
 import { CANASTA_SIZE, isCanasta, isCleanCanasta, type Meld } from './domain/meld';
 import { mineKey, planMoves } from './flights';
-import { CARD_W, dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand, type SortMode } from './handOrder';
+import { CARD_W, clampZoom, dropIndex, fanStep, moveId, nextSortMode, reconcileOrder, sortHand, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, zoomFactor, type SortMode } from './handOrder';
 
 const HELP = `<p><strong>Buraco para 2 jogadores</strong>: você contra o computador. Cada um recebe 11 cartas e um <strong>morto</strong> de 11 cartas. A partida é jogada em rodadas até alguém chegar a ${TARGET_SCORE.toLocaleString('pt-BR')} pontos.</p>
 <p><strong>Sua vez:</strong> 1) compre do <em>Monte</em> ou pegue o <em>Descarte</em> inteiro; 2) baixe jogos, acrescente cartas aos seus jogos e termine descartando uma carta.</p>
 <p><strong>Jogo</strong> = 3 ou mais cartas do mesmo naipe em sequência (o Ás vale no início ou no fim). O 2 e o coringa substituem uma carta, no máximo um por jogo. Com ${CANASTA_SIZE} cartas o jogo vira <strong>canastra</strong>: limpa (${CLEAN_CANASTA_BONUS}) ou suja (${DIRTY_CANASTA_BONUS}).</p>
 <p>Ao esvaziar a mão você pega o morto; para <strong>bater</strong> é preciso ter ao menos uma canastra.</p>
-<p><strong>Mão em leque:</strong> toque numa carta para selecioná-la, arraste para reordenar e solte sobre o Descarte para descartar. <em>Organizar</em> alterna entre agrupar por naipe e por valor.</p>`;
+<p><strong>Mão em leque:</strong> toque numa carta para selecioná-la, arraste para reordenar e solte sobre o Descarte (ou fora da mão) para descartar, ou sobre um jogo seu para acrescentar a carta — se não couber, ela volta. Com 1 carta selecionada, clicar no Descarte também descarta. A barra à direita ajusta o zoom. <em>Organizar</em> alterna entre agrupar por naipe e por valor.</p>`;
 
 const AI_DELAY_MS = 750;
 const FLY_MS = 320;
+const ZOOM_KEY = 'jj.buraco.zoom.v1';
 const SUIT_SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' } as const;
 const RANK_TEXT: Record<number, string> = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
 const fmt = (n: number): string => n.toLocaleString('pt-BR');
 const signed = (n: number): string => (n > 0 ? `+${fmt(n)}` : n < 0 ? `−${fmt(-n)}` : '—');
+
+/** Quem venceu a rodada (maior pontuação da rodada; bater só encerra a rodada, a partida vai até a meta). */
+export function roundHeadline(s: GameState): string {
+  const w = roundWinner(s);
+  return w === HUMAN ? 'Você venceu a rodada' : w === COMPUTER ? 'O computador venceu a rodada' : 'Rodada empatada';
+}
 
 /** Tabela da rodada encerrada (também usada no fim da partida). */
 export function roundTableHtml(s: GameState): string {
@@ -127,6 +134,10 @@ function describeAi(before: GameState, after: GameState): string {
 // ---------------------------------------------------------------- tela
 
 const BOARD = `
+<div class="bZoom" role="group" aria-label="Zoom da mesa">
+  <button class="bZoomVal" id="bZoomVal" type="button" title="Voltar ao tamanho original">0%</button>
+  <input id="bZoom" class="bZoomRange" type="range" min="${ZOOM_MIN}" max="${ZOOM_MAX}" step="${ZOOM_STEP}" value="0" aria-label="Zoom de ${ZOOM_MIN}% a +${ZOOM_MAX}%">
+</div>
 <div class="bScore"><span>Você <b id="bMe">0</b></span><span id="bRound"></span><span>Computador <b id="bCpu">0</b></span></div>
 <div class="bTable">
   <div class="bZone">
@@ -179,6 +190,12 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
   const cardEls = new Map<number, HTMLElement>();
   let timer: number | null = null;
   let message = '';
+  let zoom = 0;
+  try {
+    zoom = clampZoom(localStorage.getItem(ZOOM_KEY));
+  } catch { /* armazenamento indisponível: segue em 0% */ }
+  const zf = (): number => zoomFactor(zoom);
+  const cw = (): number => CARD_W * zf();
   let drag: { id: number; el: HTMLElement; x0: number; y0: number; moved: boolean } | null = null;
 
   const state = (): GameState => host.state();
@@ -248,7 +265,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
         const t = to.getBoundingClientRect();
         const dx = t.left + t.width / 2 - (j.from.left + j.from.width / 2);
         const dy = t.top + t.height / 2 - (j.from.top + j.from.height / 2);
-        const scale = Math.min(1, (to.offsetWidth || CARD_W) / CARD_W);
+        const scale = (to.offsetWidth || CARD_W) / CARD_W;
         const f = j.node;
         f.classList.add('bFlyer');
         f.style.left = `${j.from.left + j.from.width / 2 - CARD_W / 2}px`;
@@ -278,7 +295,8 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
   function layout(): void {
     const W = handEl.clientWidth;
     const n = order.length;
-    const step = fanStep(W, n);
+    const step = fanStep(W, n, cw());
+    const z = zf();
     const ang = Math.min(5, 50 / Math.max(n - 1, 1));
     order.forEach((id, i) => {
       const e = cardEls.get(id);
@@ -289,7 +307,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
       if (drag?.moved && drag.id === id) return;
       const k = i - (n - 1) / 2;
       e.dataset.ang = String(k * ang);
-      e.style.transform = `translate(${W / 2 - CARD_W / 2 + k * step}px, ${k * k * 1.1 - (selected ? 22 : 0)}px) rotate(${k * ang}deg)`;
+      e.style.transform = `translate(${W / 2 - cw() / 2 + k * step}px, ${(k * k * 1.1 - (selected ? 22 : 0)) * z}px) rotate(${k * ang}deg)`;
     });
   }
 
@@ -323,10 +341,20 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     updateButtons();
   }
 
-  const overTrash = (x: number, y: number): boolean => {
-    const r = trashEl.getBoundingClientRect();
-    return x > r.left && x < r.right && y > r.top && y < r.bottom;
-  };
+  const inside = (r: DOMRect, x: number, y: number): boolean => x > r.left && x < r.right && y > r.top && y < r.bottom;
+
+  type Zone = { kind: 'hand' } | { kind: 'meld'; id: number; el: HTMLElement } | { kind: 'out' };
+  /** Onde o ponteiro está: sobre um jogo meu, na mão (com folga acima do leque) ou fora (vale descartar). */
+  function zoneAt(x: number, y: number): Zone {
+    for (const box of $('bMyMelds').querySelectorAll<HTMLElement>('.bMeld')) {
+      if (inside(box.getBoundingClientRect(), x, y)) return { kind: 'meld', id: Number(box.dataset.mid), el: box };
+    }
+    if (inside(trashEl.getBoundingClientRect(), x, y)) return { kind: 'out' };
+    return y >= handEl.getBoundingClientRect().top - 36 * zf() ? { kind: 'hand' } : { kind: 'out' };
+  }
+
+  /** Cartas levadas pelo arraste: a seleção, se a carta arrastada faz parte dela; senão só a carta. */
+  const dragIds = (id: number): number[] => (sel.has(id) ? [...sel] : [id]);
 
   function down(ev: PointerEvent, id: number, e: HTMLElement): void {
     if (!myTurn(state()) || host.paused) return;
@@ -337,6 +365,11 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     e.onpointercancel = up;
   }
 
+  function clearHints(): void {
+    trashEl.classList.remove('dropHint');
+    body.querySelectorAll('.bMeld.dropOk, .bMeld.dropNo').forEach((m) => m.classList.remove('dropOk', 'dropNo'));
+  }
+
   function move(ev: PointerEvent): void {
     if (!drag) return;
     if (!drag.moved && Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) < 6) return;
@@ -345,9 +378,16 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     const r = handEl.getBoundingClientRect();
     const px = ev.clientX - r.left;
     const py = ev.clientY - r.top;
-    drag.el.style.transform = `translate(${px - CARD_W / 2}px, ${py - 31 - r.height + 62}px)`;
-    order = moveId(order, drag.id, dropIndex(px, r.width, order.length));
-    trashEl.classList.toggle('dropHint', state().phase === 'play' && overTrash(ev.clientX, ev.clientY));
+    const ch = 62 * zf();
+    drag.el.style.transform = `translate(${px - cw() / 2}px, ${py - ch / 2 - (r.height - ch)}px)`;
+    const s = state();
+    const zone = zoneAt(ev.clientX, ev.clientY);
+    if (zone.kind === 'hand') order = moveId(order, drag.id, dropIndex(px, r.width, order.length, cw()));
+    clearHints();
+    if (s.phase === 'play') {
+      if (zone.kind === 'out') trashEl.classList.add('dropHint');
+      if (zone.kind === 'meld') zone.el.classList.add(addToMeld(s, zone.id, dragIds(drag.id)).ok ? 'dropOk' : 'dropNo');
+    }
     layout();
   }
 
@@ -357,14 +397,16 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     drag = null;
     d.el.classList.remove('drag');
     d.el.onpointermove = d.el.onpointerup = d.el.onpointercancel = null;
-    trashEl.classList.remove('dropHint');
+    clearHints();
     const s = state();
     if (d.moved) {
-      if (ev.type === 'pointerup' && s.phase === 'play' && overTrash(ev.clientX, ev.clientY)) {
-        act(discardCard(s, d.id));
-        return;
+      if (ev.type === 'pointerup' && s.phase === 'play' && myTurn(s)) {
+        const zone = zoneAt(ev.clientX, ev.clientY);
+        // Encaixa → entra no jogo; não encaixa → volta à mão. Fora de tudo → descarta.
+        if (zone.kind === 'meld' && act(addToMeld(s, zone.id, dragIds(d.id)))) return;
+        if (zone.kind === 'out' && act(discardCard(s, d.id))) return;
       }
-      layout();
+      layout(); // volta ao leque (com a transição de sempre)
       return;
     }
     toggle(d.id);
@@ -380,6 +422,9 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     addBtn.disabled = !(play && findAddTarget(s, ids) !== null);
     discardBtn.disabled = !(play && ids.length === 1 && discardCard(s, ids[0]!).ok);
     knockBtn.disabled = !(play && knockMove(s) !== null);
+    const drawing = myTurn(s) && s.phase === 'draw';
+    deckEl.classList.toggle('act', drawing && s.stock.length > 0);
+    trashEl.classList.toggle('act', (drawing && s.discard.length > 0) || !discardBtn.disabled);
     meldBtn.classList.toggle('new', !meldBtn.disabled);
     discardBtn.classList.toggle('new', !discardBtn.disabled);
     sortBtn.textContent = `⇅ Organizar: por ${sortMode === 'suit' ? 'naipe' : 'valor'}`;
@@ -389,7 +434,19 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     if (myTurn(state()) && state().phase === 'draw') act(r, text);
   }
   const onDeck = (): void => drawFlow(drawFromStock(state()), '');
-  const onTrash = (): void => drawFlow(takeDiscardPile(state()), 'Você pegou o descarte.');
+  const onTrash = (): void => {
+    const s = state();
+    if (myTurn(s) && s.phase === 'play' && !host.paused) {
+      const ids = [...sel];
+      if (ids.length === 1) act(discardCard(s, ids[0]!));
+      else {
+        message = 'Selecione uma carta e toque no Descarte para descartá-la.';
+        msgEl.textContent = message;
+      }
+      return;
+    }
+    drawFlow(takeDiscardPile(s), 'Você pegou o descarte.');
+  };
   for (const [pile, fn] of [[deckEl, onDeck], [trashEl, onTrash]] as const) {
     pile.addEventListener('click', fn);
     pile.addEventListener('keydown', (ev) => {
@@ -429,6 +486,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     const ids = [...sel];
     for (const m of melds) {
       const box = el('div', 'bMeld');
+      box.dataset.mid = String(m.id);
       if (isCanasta(m)) {
         const clean = isCleanCanasta(m);
         box.appendChild(el('span', `bBadge ${clean ? 'limpa' : 'suja'}`, `${clean ? 'Limpa' : 'Suja'} ${clean ? CLEAN_CANASTA_BONUS : DIRTY_CANASTA_BONUS}`));
@@ -483,13 +541,10 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
       e.style.left = `${i * 9}px`;
       return e;
     }) : [el('div', 'bcard empty', 'vazio')]));
-    $('bTrashStack').style.width = `${44 + Math.max(0, top.length - 1) * 9}px`;
+    $('bTrashStack').style.width = `calc(44px * var(--bz, 1) + ${Math.max(0, top.length - 1) * 9}px)`;
     $('bTrashN').textContent = `${s.discard.length} cartas`;
     $('bDeadCard').replaceChildren(me.dead ? backEl() : el('div', 'bcard empty', 'pego'));
     $('bDeadN').textContent = me.dead ? `${me.dead.length} cartas` : 'já pego';
-    const draw = myTurn(s) && s.phase === 'draw';
-    deckEl.classList.toggle('act', draw && s.stock.length > 0);
-    trashEl.classList.toggle('act', draw && s.discard.length > 0);
   }
 
   function renderMyMelds(s: GameState): void {
@@ -566,7 +621,7 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
       const winner = s.result?.wentOut;
       dialog(body.closest('section')?.parentElement ?? document.body, {
         title: `Fim da rodada ${s.round}`,
-        html: `<p>${winner === HUMAN ? 'Você bateu!' : winner === COMPUTER ? 'O computador bateu.' : 'O monte acabou.'}</p>${roundTableHtml(s)}`,
+        html: `<p class="bVerdict">${roundHeadline(s)}</p><p>${winner === HUMAN ? 'Você bateu!' : winner === COMPUTER ? 'O computador bateu.' : 'O monte acabou.'}</p>${roundTableHtml(s)}`,
         buttons: [{ label: 'Próxima rodada', primary: true, action: () => {
           const r = nextRound(state());
           if (r.ok) {
@@ -578,6 +633,27 @@ function mountView(body: HTMLElement, host: GameHost<GameState>, _ctx: GameConte
     }
     schedule();
   }
+
+  // ---------- zoom (barra vertical à direita; 0 = tamanho original)
+  const zoomRange = $<HTMLInputElement>('bZoom');
+  const zoomVal = $<HTMLButtonElement>('bZoomVal');
+  function applyZoom(pct: number, save: boolean): void {
+    zoom = clampZoom(pct);
+    body.style.setProperty('--bz', String(zf()));
+    const label = `${zoom > 0 ? '+' : ''}${zoom}%`;
+    zoomRange.value = String(zoom);
+    zoomRange.setAttribute('aria-valuetext', label);
+    zoomVal.textContent = label;
+    if (save) {
+      try {
+        localStorage.setItem(ZOOM_KEY, String(zoom));
+      } catch { /* sem armazenamento: vale só nesta sessão */ }
+    }
+    layout();
+  }
+  zoomRange.addEventListener('input', () => applyZoom(Number(zoomRange.value), true));
+  zoomVal.addEventListener('click', () => applyZoom(0, true));
+  applyZoom(zoom, false);
 
   const onResize = (): void => layout();
   window.addEventListener('resize', onResize);
@@ -616,7 +692,7 @@ export const buraco = createGame<GameState, 'padrao'>({
     const won = matchWinner(s) === HUMAN;
     return {
       title: won ? 'Você venceu!' : 'O computador venceu',
-      html: `<p>${won ? 'Parabéns, você chegou primeiro à meta.' : 'Desta vez o computador chegou primeiro.'}</p>${roundTableHtml(s)}`,
+      html: `<p class="bVerdict">${won ? 'Parabéns, você chegou primeiro à meta.' : 'Desta vez o computador chegou primeiro.'}</p><p>${roundHeadline(s)}.</p>${roundTableHtml(s)}`,
     };
   },
 });
