@@ -52,6 +52,9 @@ migrations/          SQL do D1 (0001_users.sql); scripts/migrate-kv-to-d1.mjs co
 public/words/        lista de palavras de 5 letras (pt_br_5letras.txt) e NOTICE.txt
 docs/                mockups HTML históricos (login, admin, sudoku, temas, teoria das cores)
 ```
+O **Buraco** foge desse molde: o domínio fica em `games/buraco/domain/` (`cards`, `meld`, `game`, `scoring`, `ai`, com RNG injetável) e a
+interface em `index.ts` + `handOrder.ts` (organizar a mão) + `flights.ts` (animações de carta voando). Ver "Buraco" abaixo.
+
 Cada jogo tem `domain.ts` (regras, sem DOM, testado) e `index.ts` (tabuleiro e ligação com o domínio).
 Testes ficam ao lado do código (`*.test.ts`; os jogos simples em `src/games/lote*.test.ts`).
 
@@ -79,6 +82,19 @@ o catálogo monta. O shell cuida de:
 `records.ts` (recorde por nível), `menu.ts`, `option.ts` (opção persistida), `clock.ts` (cronômetro), `gameStore.ts`
 (persistência), `storage.ts` (`localStorage` tolerante a falha, escopo por usuário), `theme.ts`, `catalog.ts`.
 `ui.ts` apenas reexporta `dom`, `dialog`, `menu` e `records`.
+
+## Buraco (2 jogadores: você × computador)
+- **Regras:** 2 baralhos + coringas (o 2 também é curinga), 11 cartas, com morto; só sequências do mesmo naipe (mín. 3, sem trinca).
+  Compra do monte ou pega a pilha inteira do descarte. Canastra limpa +200, suja +100; bater exige ao menos uma canastra (+100).
+  Pontos da rodada = canastras + cartas baixadas + bônus − cartas na mão. A **partida** acaba ao chegar a 3000 (maior total vence;
+  empate segue); bater só encerra a rodada, e o modal de fim de rodada diz quem venceu a rodada e, se for o caso, a partida.
+  Pontos por carta (`cardPoints`, `domain/cards.ts`) ainda são provisórios.
+- **Interface:** mão em leque compacto (clicar levanta a carta; arrastar reordena); botão Organizar (naipe/valor).
+  Descartar: clicar no monte com a carta selecionada, arrastá-la ao monte, ou soltá-la fora da mão e de qualquer jogo (na vez de
+  descarte). Arrastar a um jogo da mesa encaixa se couber; senão a carta volta à mão. Animações ao comprar e ao baixar/acrescentar;
+  a IA não recria a view da mão do jogador. Controle de zoom vertical à direita (0 no centro, −50% a +50%).
+- **Persistência:** partida em `jj.buraco.game.v1`; zoom em `jj.buraco.zoom.v1`.
+- **Mockup aprovado:** `docs/mockup-buraco.html`.
 
 ## Como adicionar um jogo
 1. Crie `src/games/<jogo>/domain.ts` (regras puras, com testes) e `index.ts`.
