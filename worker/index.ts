@@ -13,8 +13,8 @@ import {
 import { ADMIN_MESSAGES, adminPage } from './adminPage';
 import { loginPage } from './loginPage';
 import {
-  MAX_USERS, deleteUser, getUser, hashPassword, listUsers, normalizeUser, passwordProblem, putUser, verifyPassword,
-  type KV,
+  createUser, deleteUser, getUser, hashPassword, listUsers, normalizeUser, passwordProblem, setPassword, verifyPassword,
+  type D1,
 } from './users';
 
 export interface Env {
@@ -24,8 +24,8 @@ export interface Env {
   /** Usuários extras: JSON `{"usuario":"senha"}`; somam-se ao par APP_USER/APP_PASSWORD. */
   APP_USERS?: string;
   SESSION_SECRET?: string;
-  /** Usuários cadastrados pela tela de administração (opcional: sem ele só valem as contas dos secrets). */
-  USERS?: KV;
+  /** D1 com os usuários cadastrados pela tela de administração (opcional: sem ele só valem as contas dos secrets). */
+  DB?: D1;
 }
 
 /** Prefixo sob o qual o app é publicado no domínio principal (nexohorizonte.com.br/jogos-jornal). */
@@ -122,10 +122,10 @@ async function handleLogin(request: Request, env: Env, secret: string, base: str
     const okPass = await safeEqual(password.slice(0, 200), pw, secret);
     if (okUser && okPass) who = u;
   }
-  // Contas cadastradas no KV: sempre deriva o hash (mesmo sem usuário) para o tempo não revelar quem existe.
-  if (!who && env.USERS && form) {
+  // Contas cadastradas no D1: sempre deriva o hash (mesmo sem usuário) para o tempo não revelar quem existe.
+  if (!who && env.DB && form) {
     const name = normalizeUser(user.slice(0, 200));
-    const record = name ? await getUser(env.USERS, name) : null;
+    const record = name ? await getUser(env.DB, name) : null;
     if ((await verifyPassword(password.slice(0, 200), record)) && name && record) who = name;
   }
 
@@ -145,40 +145,30 @@ async function handleAdmin(request: Request, env: Env, url: URL, pathname: strin
   if (pathname === '/admin') {
     if (request.method !== 'GET') return respond('Método não permitido', { status: 405, headers: { Allow: 'GET' } });
     const code = url.searchParams.get('m') ?? '';
-    const users = env.USERS ? await listUsers(env.USERS) : [];
-    return html(adminPage({ base, admin, fixed, users, messageCode: code in ADMIN_MESSAGES ? code : env.USERS ? undefined : 'nokv' }));
+    const users = env.DB ? await listUsers(env.DB) : [];
+    return html(adminPage({ base, admin, fixed, users, messageCode: code in ADMIN_MESSAGES ? code : env.DB ? undefined : 'nostorage' }));
   }
 
   const action = pathname.slice('/admin/'.length);
   if (!['create', 'password', 'delete'].includes(action)) return respond('Não encontrado', { status: 404 });
   if (request.method !== 'POST') return respond('Método não permitido', { status: 405, headers: { Allow: 'POST' } });
   if (!isSameOrigin(request)) return respond('Origem inválida', { status: 403 });
-  const kv = env.USERS;
-  if (!kv) return back('nokv');
+  const db = env.DB;
+  if (!db) return back('nostorage');
   const form = await readForm(request);
   if (!form) return back('invalid');
 
   const name = normalizeUser(form.get('user') ?? '');
   if (!name) return back('invalid');
-  const password = form.get('password') ?? '';
-  const existing = await getUser(kv, name);
 
-  if (action === 'delete') {
-    if (!existing) return back('missing');
-    await deleteUser(kv, name);
-    return back('deleted');
-  }
+  if (action === 'delete') return back((await deleteUser(db, name)) ? 'deleted' : 'missing');
+  const password = form.get('password') ?? '';
   if (passwordProblem(password)) return back('weak');
-  if (action === 'password') {
-    if (!existing) return back('missing');
-    await putUser(kv, name, await hashPassword(password, Date.now()));
-    return back('password');
-  }
+  const record = await hashPassword(password, Date.now());
+  if (action === 'password') return back((await setPassword(db, name, record)) ? 'password' : 'missing');
   if (fixed.some((f) => f.toLowerCase() === name)) return back('reserved');
-  if (existing) return back('exists');
-  if ((await listUsers(kv)).length >= MAX_USERS) return back('limit');
-  await putUser(kv, name, await hashPassword(password, Date.now()));
-  return back('created');
+  const result = await createUser(db, name, record);
+  return back(result === 'created' ? 'created' : result);
 }
 
 export default {
@@ -208,7 +198,7 @@ export default {
     if (!session) return redirect(`${base}/login`);
     const user = session.user;
     // Conta cadastrada que foi removida perde o acesso já na próxima requisição (a sessão em si não expira antes).
-    if (user !== null && !credentialsOf(env).some(([u]) => u === user) && !(env.USERS && (await getUser(env.USERS, user)))) {
+    if (user !== null && !credentialsOf(env).some(([u]) => u === user) && !(env.DB && (await getUser(env.DB, user)))) {
       return redirect(`${base}/login`, sessionCookie('', 0));
     }
     const isAdmin = user !== null && !!env.APP_USER && user === env.APP_USER;

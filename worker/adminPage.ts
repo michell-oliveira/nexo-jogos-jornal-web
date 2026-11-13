@@ -13,7 +13,8 @@ export const ADMIN_MESSAGES: Record<string, { text: string; error?: boolean }> =
   reserved: { text: 'Esse nome pertence a uma conta fixa do servidor.', error: true },
   missing: { text: 'Usuário não encontrado.', error: true },
   limit: { text: 'Limite de usuários cadastrados atingido.', error: true },
-  nokv: { text: 'Cadastro indisponível: o armazenamento (KV) não está configurado.', error: true },
+  nostorage: { text: 'Cadastro indisponível: o banco de dados (D1) não está configurado.', error: true },
+  nokv: { text: 'Cadastro indisponível: o banco de dados (D1) não está configurado.', error: true }, // links antigos
 };
 
 export interface AdminView {
